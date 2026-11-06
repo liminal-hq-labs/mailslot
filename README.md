@@ -31,6 +31,8 @@ Ubuntu 24.04 is too old for the desktop app. The Flatpak and AppImage cover olde
 
 ## First run
 
+<p align="center"><img src="docs/screenshots/main-receiving.png" alt="Mailslot sharing a link with a QR code while two files arrive" width="380"></p>
+
 1. Open Mailslot and press **Start**.
 2. Copy the link, or scan the QR code with your phone.
 3. Send a file. It appears in the Incoming list and in `~/Downloads/Mailslot`.

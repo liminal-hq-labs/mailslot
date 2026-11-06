@@ -61,11 +61,11 @@
 
 	<screenshots>
 		<screenshot type="default">
-			<image type="source" width="1280" height="800">https://raw.githubusercontent.com/liminal-hq/mailslot/main/docs/screenshots/main-idle.png</image>
+			<image type="source" width="760" height="1024">https://raw.githubusercontent.com/liminal-hq/mailslot/main/docs/screenshots/main-idle.png</image>
 			<caption>Share page with the link, QR code and incoming files</caption>
 		</screenshot>
 		<screenshot>
-			<image type="source" width="1280" height="800">https://raw.githubusercontent.com/liminal-hq/mailslot/main/docs/screenshots/main-receiving.png</image>
+			<image type="source" width="760" height="1024">https://raw.githubusercontent.com/liminal-hq/mailslot/main/docs/screenshots/main-receiving.png</image>
 			<caption>Receiving a file with progress and checksum</caption>
 		</screenshot>
 	</screenshots>
