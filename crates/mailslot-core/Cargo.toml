@@ -61,6 +61,7 @@ rcgen = { version = "0.14", default-features = false, features = ["ring", "pem"]
 [dev-dependencies]
 proptest.workspace = true
 tempfile = "3"
+tokio = { workspace = true, features = ["process"] }
 
 [[example]]
 name = "serve"

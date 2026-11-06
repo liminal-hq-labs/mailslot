@@ -48,6 +48,7 @@ pub enum Error {
 }
 
 impl Error {
+	#[cfg(feature = "server")]
 	pub(crate) fn from_bind(e: std::io::Error) -> Self {
 		match e.kind() {
 			std::io::ErrorKind::AddrInUse => Error::AddrInUse,

@@ -371,6 +371,7 @@ pub enum Event {
 	Lagged(u64),
 }
 
+#[cfg(feature = "server")]
 impl EngineState {
 	pub(crate) fn apply_upload(&mut self, ev: &UploadEvent) {
 		match ev {

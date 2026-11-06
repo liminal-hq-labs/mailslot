@@ -506,18 +506,21 @@ pub(super) async fn put(
 			}
 			_ = shared.shutdown.cancelled() => {
 				attempt.keep_part = true;
+				let _ = writer.flush().await;
 				return attempt.fail(StatusCode::SERVICE_UNAVAILABLE, "stopping").await;
 			}
 			r = tokio::time::timeout(settings.idle_timeout, stream.next()) => r,
 		};
 		let chunk = match next {
 			Err(_) => {
+				let _ = writer.flush().await;
 				return attempt
 					.fail(StatusCode::REQUEST_TIMEOUT, "upload stalled")
 					.await;
 			}
 			Ok(None) => break,
 			Ok(Some(Err(_))) => {
+				let _ = writer.flush().await;
 				return attempt
 					.fail(StatusCode::BAD_REQUEST, "connection error")
 					.await;
@@ -669,6 +672,7 @@ pub(super) async fn put(
 			.await
 		{
 			let _ = f.write_all(format!("{sha}  {saved_as}\n").as_bytes()).await;
+			let _ = f.flush().await;
 		}
 	}
 	attempt.finished = true;

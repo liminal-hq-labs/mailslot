@@ -13,9 +13,12 @@
 
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+#[cfg(feature = "client")]
 use std::path::PathBuf;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::AtomicU64;
+#[cfg(feature = "client")]
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 use std::time::{Duration, SystemTime};
@@ -54,6 +57,7 @@ impl Stream for EventStream {
 }
 
 /// What to send and where.
+#[cfg(feature = "client")]
 #[derive(Clone, Debug)]
 pub struct SendRequest {
 	/// The destination share.
@@ -83,6 +87,7 @@ struct Inner {
 	history: History,
 	hashes: Arc<HashIndex>,
 	free_space: Arc<dyn FreeSpace>,
+	#[cfg_attr(not(feature = "client"), allow(dead_code))]
 	next_send: AtomicU64,
 	sends: Mutex<HashMap<SendId, tokio::task::AbortHandle>>,
 	#[cfg(feature = "portmap")]
@@ -523,17 +528,10 @@ impl Engine {
 
 	/// Sends files to another share. Returns the transfer ids; progress arrives as
 	/// [`Event::Send`].
+	#[cfg(feature = "client")]
 	pub async fn send(&self, req: SendRequest) -> Result<Vec<SendId>> {
-		#[cfg(feature = "client")]
-		{
-			let inner = self.inner.clone();
-			self.run(async move { send_inner(inner, req).await }).await
-		}
-		#[cfg(not(feature = "client"))]
-		{
-			let _ = req;
-			Err(Error::FeatureDisabled("client"))
-		}
+		let inner = self.inner.clone();
+		self.run(async move { send_inner(inner, req).await }).await
 	}
 
 	/// Cancels a running transfer.
@@ -850,6 +848,7 @@ async fn set_internet_inner(inner: Arc<Inner>, on: bool) {
 	}
 }
 
+#[cfg(feature = "portmap")]
 fn set_internet_state(inner: &Inner, st: InternetState) {
 	inner.mutate(|s| s.internet = st.clone());
 	inner.emit(Event::Internet(InternetEvent::State(st)));
