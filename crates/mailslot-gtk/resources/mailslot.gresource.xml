@@ -11,4 +11,14 @@
 		<file preprocess="xml-stripblanks">ui/upload_row.ui</file>
 		<file>style.css</file>
 	</gresource>
+	<!--
+	 The application icons live in `data/icons`, which the packages install into the system
+	 icon theme. They are bundled here too, so the binary finds them before it is installed.
+	 `build.rs` adds `data/icons` as a source directory. GTK treats a resource path as part of
+	 the hicolor theme, so the files sit directly under the size folders, without `hicolor/`.
+	-->
+	<gresource prefix="/ca/liminalhq/mailslot/icons">
+		<file alias="scalable/apps/ca.liminalhq.mailslot.svg">hicolor/scalable/apps/ca.liminalhq.mailslot.svg</file>
+		<file alias="symbolic/apps/ca.liminalhq.mailslot-symbolic.svg">hicolor/symbolic/apps/ca.liminalhq.mailslot-symbolic.svg</file>
+	</gresource>
 </gresources>
