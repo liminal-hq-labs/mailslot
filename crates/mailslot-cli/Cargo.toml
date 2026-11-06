@@ -1,5 +1,49 @@
 [package]
 name = "mailslot-cli"
+description = "Command-line server and client for Mailslot: serve a private file drop, send files with resume and dedupe, watch a folder."
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+readme = "README.md"
+keywords = ["file-transfer", "upload", "cli", "upnp", "http"]
+categories = ["command-line-utilities", "network-programming"]
+
+[[bin]]
+name = "mailslot-cli"
+path = "src/main.rs"
+
 [dependencies]
+mailslot-core = { workspace = true, features = ["server", "client", "portmap", "tls"] }
+anyhow.workspace = true
+clap.workspace = true
+clap_complete.workspace = true
+clap_mangen.workspace = true
+qrcode = { version = "0.14", default-features = false }
+serde_json.workspace = true
+tokio = { workspace = true, features = ["io-std"] }
+tokio-stream.workspace = true
+futures-util.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
+
+[package.metadata.deb]
+name = "mailslot-cli"
+section = "net"
+priority = "optional"
+extended-description = "Serve a private file drop from a headless machine, or send files to a Mailslot link with resumable uploads, deduplication and checksums. No GTK required."
+assets = [
+	["target/release/mailslot-cli", "usr/bin/", "755"],
+]
+
+[package.metadata.generate-rpm]
+name = "mailslot-cli"
+summary = "Command-line server and client for Mailslot"
+assets = [
+	{ source = "target/release/mailslot-cli", dest = "/usr/bin/mailslot-cli", mode = "755" },
+]
