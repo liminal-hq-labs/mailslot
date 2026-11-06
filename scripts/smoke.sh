@@ -38,7 +38,7 @@ server_pid=$!
 
 url=""
 for _ in $(seq 1 100); do
-	url="$(sed -n 's/^URL <\(.*\)>$/\1/p' "$work/serve.out" | head -n1)"
+	url="$(sed -n 's/^URL \(.*\)$/\1/p' "$work/serve.out" | head -n1)"
 	[ -n "$url" ] && break
 	kill -0 "$server_pid" 2>/dev/null || fail "server exited early: $(cat "$work/serve.err")"
 	sleep 0.1
@@ -105,11 +105,11 @@ pass "422 on digest mismatch"
 total="$(stat -c %s "$work/a.bin")"
 head -c 100000 "$work/a.bin" >"$work/part1"
 tail -c +100001 "$work/a.bin" >"$work/part2"
-code="$(curl -sS -o /dev/null -w '%{http_code}' -X PUT -H "X-Mailslot-Expected-Sha256: $want" -H "Content-Range: bytes 0-99999/$total" --data-binary @"$work/part1" "$base/resumed.bin")"
+code="$(curl -sS -o /dev/null -w '%{http_code}' -X PUT -H "X-Mailslot-Expected-Sha256: $want" -H "X-Mailslot-Upload-Id: smoke-resume-1" -H "Content-Range: bytes 0-99999/$total" --data-binary @"$work/part1" "$base/resumed.bin")"
 [ "$code" = 202 ] || fail "first range returned $code, want 202"
-offset="$(curl -sS -I -H "X-Mailslot-Expected-Sha256: $want" "$base/resumed.bin" | tr -d '\r' | sed -n 's/^[Xx]-[Mm]ailslot-[Oo]ffset: //p')"
+offset="$(curl -sS -I -H "X-Mailslot-Upload-Id: smoke-resume-1" "$base/resumed.bin" | tr -d '\r' | sed -n 's/^[Xx]-[Mm]ailslot-[Oo]ffset: //p')"
 [ "$offset" = 100000 ] || fail "HEAD offset was '$offset', want 100000"
-hdrs="$(curl -sS -D - -o /dev/null -X PUT -H "X-Mailslot-Expected-Sha256: $want" -H "Content-Range: bytes 100000-$((total - 1))/$total" --data-binary @"$work/part2" "$base/resumed.bin")"
+hdrs="$(curl -sS -D - -o /dev/null -X PUT -H "X-Mailslot-Expected-Sha256: $want" -H "X-Mailslot-Upload-Id: smoke-resume-1" -H "Content-Range: bytes 100000-$((total - 1))/$total" --data-binary @"$work/part2" "$base/resumed.bin")"
 echo "$hdrs" | head -n1 | grep -q ' 201' || fail "final range did not return 201: $hdrs"
 got="$(echo "$hdrs" | tr -d '\r' | sed -n 's/^[Xx]-[Mm]ailslot-[Ss]ha256: //p')"
 [ "$got" = "$want" ] || fail "resumed checksum $got differs from $want"
