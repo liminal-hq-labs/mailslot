@@ -45,6 +45,20 @@ pub async fn run(a: ServeArgs) -> Result<ExitCode> {
 	if let Some(n) = a.stop_after {
 		config.sharing.stop_after_files = n;
 	}
+	if let Some(l) = &a.label {
+		config.sharing.link_label = l.clone();
+	}
+	if let Some(m) = &a.subfolders {
+		use mailslot_core::config::SubfolderScheme::*;
+		config.storage.subfolder = match m.as_str() {
+			"date" => ByDate,
+			"sender" => BySender,
+			_ => None,
+		};
+	}
+	if a.mdns {
+		config.network.mdns = true;
+	}
 	if a.https {
 		config.security.https = true;
 	}

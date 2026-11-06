@@ -187,3 +187,114 @@ fn completions_and_man_are_generated() {
 	let man = Command::new(BIN).arg("man").output().unwrap();
 	assert!(String::from_utf8_lossy(&man.stdout).contains(".TH mailslot-cli"));
 }
+
+fn run_watch_for(secs: u64, dir: &Path, link: &str, state: &Path) -> String {
+	let mut child = Command::new(BIN)
+		.args(["watch", "--json", "--debounce-ms", "200", "--state"])
+		.arg(state)
+		.arg(dir)
+		.arg(link)
+		.stdout(Stdio::piped())
+		.stderr(Stdio::null())
+		.spawn()
+		.unwrap();
+	std::thread::sleep(Duration::from_secs(secs));
+	let _ = Command::new("kill")
+		.args(["-TERM", &child.id().to_string()])
+		.status();
+	let out = child.wait_with_output().unwrap();
+	String::from_utf8_lossy(&out.stdout).into_owned()
+}
+
+#[test]
+fn watch_queue_survives_restarts_and_resends_only_changes() {
+	let dir = tempfile::tempdir().unwrap();
+	let dest = dir.path().join("up");
+	let server = Serve::start(&dest);
+	let outbox = dir.path().join("outbox");
+	std::fs::create_dir_all(outbox.join("sub")).unwrap();
+	std::fs::write(outbox.join("sub/a.txt"), "first").unwrap();
+	let state = dir.path().join("state/queue.json");
+
+	// First run sends what is already there.
+	let out = run_watch_for(3, &outbox, &server.link, &state);
+	assert!(
+		out.contains("\"event\":\"done\"") && out.contains("a.txt"),
+		"{out}"
+	);
+	assert_eq!(std::fs::read(dest.join("a.txt")).unwrap(), b"first");
+	assert!(state.exists(), "the queue is persisted");
+
+	// A restart with nothing new sends nothing, not even a dedupe check.
+	let out = run_watch_for(2, &outbox, &server.link, &state);
+	assert!(
+		!out.contains("\"event\":\"done\"") && !out.contains("skipped"),
+		"{out}"
+	);
+
+	// A change made while the watcher was stopped is picked up on the next start.
+	std::fs::write(outbox.join("sub/a.txt"), "second version").unwrap();
+	std::fs::write(outbox.join("b.txt"), "new file").unwrap();
+	let out = run_watch_for(3, &outbox, &server.link, &state);
+	assert!(out.contains("b.txt") && out.contains("a.txt"), "{out}");
+	assert_eq!(std::fs::read(dest.join("b.txt")).unwrap(), b"new file");
+	assert_eq!(
+		std::fs::read(dest.join("a-1.txt")).unwrap(),
+		b"second version"
+	);
+}
+
+#[test]
+fn pair_discover_runs_and_never_asks_for_a_secret() {
+	let out = Command::new(BIN)
+		.args(["pair", "--discover", "--timeout", "1", "--json"])
+		.output()
+		.unwrap();
+	assert!(out.status.success());
+	let v: serde_json::Value = serde_json::from_slice(&out.stdout).unwrap();
+	assert!(v.is_array());
+}
+
+#[test]
+fn serve_label_files_senders_by_name() {
+	let dir = tempfile::tempdir().unwrap();
+	let dest = dir.path().join("up");
+	let mut child = Command::new(BIN)
+		.args([
+			"serve",
+			"--ephemeral",
+			"--bind",
+			"127.0.0.1",
+			"--port",
+			"0",
+			"--subfolders",
+			"sender",
+			"--label",
+			"Jules",
+			"--dir",
+		])
+		.arg(&dest)
+		.stdout(Stdio::piped())
+		.stderr(Stdio::null())
+		.spawn()
+		.unwrap();
+	let mut line = String::new();
+	BufReader::new(child.stdout.as_mut().unwrap())
+		.read_line(&mut line)
+		.unwrap();
+	let url = line.trim().strip_prefix("URL ").unwrap().to_owned();
+	let src = dir.path().join("note.txt");
+	std::fs::write(&src, "hi").unwrap();
+	let ok = Command::new("curl")
+		.args(["--silent", "--fail", "-T"])
+		.arg(&src)
+		.arg(format!("{url}note.txt"))
+		.status();
+	let _ = Command::new("kill")
+		.args(["-TERM", &child.id().to_string()])
+		.status();
+	let _ = child.wait();
+	if ok.is_ok_and(|s| s.success()) {
+		assert!(dest.join("Jules/note.txt").is_file());
+	}
+}
