@@ -452,3 +452,144 @@ fn own_runtime_engine_is_driven_by_a_foreign_executor() {
 	});
 	assert_eq!(status, Status::Sharing);
 }
+
+#[tokio::test]
+async fn pause_refuses_uploads_until_resumed() {
+	let dir = tempfile::tempdir().unwrap();
+	let e = engine(dir.path()).await;
+	assert!(
+		e.pause().await.is_err(),
+		"pausing while stopped is an error"
+	);
+	e.start().await.unwrap();
+	let base = link_of(&e).drop_url();
+	let http = reqwest::Client::new();
+	e.pause().await.unwrap();
+	assert!(e.state().paused);
+	assert_eq!(
+		http.put(format!("{base}a.txt"))
+			.body("x")
+			.send()
+			.await
+			.unwrap()
+			.status(),
+		503
+	);
+	let health: serde_json::Value = http
+		.get(format!("{base}health"))
+		.send()
+		.await
+		.unwrap()
+		.json()
+		.await
+		.unwrap();
+	assert_eq!(health["accepting"], false);
+	e.resume().await.unwrap();
+	assert!(!e.state().paused);
+	assert_eq!(
+		http.put(format!("{base}a.txt"))
+			.body("x")
+			.send()
+			.await
+			.unwrap()
+			.status(),
+		201
+	);
+	e.pause().await.unwrap();
+	e.stop().await.unwrap();
+	assert!(!e.state().paused, "stopping clears the pause");
+}
+
+#[tokio::test]
+async fn link_label_names_the_sender_folder_and_travels_in_links() {
+	use mailslot_core::config::SubfolderScheme;
+	let dir = tempfile::tempdir().unwrap();
+	let mut cfg = test_config(dir.path());
+	cfg.storage.subfolder = SubfolderScheme::BySender;
+	cfg.sharing.link_label = "Jules".into();
+	mailslot_core::tls::ensure_default_provider();
+	let e = EngineBuilder::new(Paths::in_dir(dir.path()))
+		.config(cfg)
+		.persist(false)
+		.build()
+		.await
+		.unwrap();
+	let st = e.start().await.unwrap();
+	assert!(
+		st.urls[0].link.contains("label=Jules"),
+		"{}",
+		st.urls[0].link
+	);
+	// A sender using the label-carrying link is filed under it, with no extra options.
+	let link = MailslotLink::parse(&st.urls[0].link).unwrap();
+	assert_eq!(link.label.as_deref(), Some("Jules"));
+	let src = dir.path().join("f.txt");
+	std::fs::write(&src, "x").unwrap();
+	Client::new(link, ClientOptions::default())
+		.unwrap()
+		.send_file(&src, None)
+		.await
+		.unwrap();
+	assert!(e.config().storage.dest_dir.join("Jules/f.txt").is_file());
+	// A plain PUT without any header lands there too.
+	let url = format!("{}g.txt", link_of(&e).drop_url());
+	reqwest::Client::new()
+		.put(url)
+		.body("y")
+		.send()
+		.await
+		.unwrap();
+	assert!(e.config().storage.dest_dir.join("Jules/g.txt").is_file());
+	e.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn mdns_advertises_only_when_enabled_and_never_the_secret() {
+	let dir = tempfile::tempdir().unwrap();
+	// Off by default: nothing is announced.
+	let e = engine(dir.path()).await;
+	e.start().await.unwrap();
+	assert!(!e.state().advertising);
+	e.stop().await.unwrap();
+
+	let mut cfg = test_config(dir.path());
+	cfg.network.mdns = true;
+	cfg.sharing.link_label = "Desk".into();
+	mailslot_core::tls::ensure_default_provider();
+	let e = EngineBuilder::new(Paths::in_dir(dir.path()))
+		.config(cfg)
+		.persist(false)
+		.build()
+		.await
+		.unwrap();
+	let st = e.start().await.unwrap();
+	assert!(st.advertising);
+	let port = st.addr.unwrap().port();
+	let mut found = None;
+	for _ in 0..3 {
+		let peers = e.discover_peers(Duration::from_secs(2)).await.unwrap();
+		if let Some(p) = peers.into_iter().find(|p| p.port == port) {
+			found = Some(p);
+			break;
+		}
+	}
+	let Some(peer) = found else {
+		// Some sandboxes and CI containers have no multicast; the advertising state above
+		// still proved the preference is honoured.
+		assert!(
+			std::env::var_os("MAILSLOT_REQUIRE_MDNS").is_none(),
+			"mDNS multicast is required here but nothing was found"
+		);
+		eprintln!("no mDNS answers (multicast unavailable); skipping the browse checks");
+		e.stop().await.unwrap();
+		return;
+	};
+	assert_eq!(peer.label.as_deref(), Some("Desk"));
+	assert!(
+		!format!("{peer:?}").contains(e.token().expose()),
+		"the secret is never announced"
+	);
+	assert!(peer.partial_link().ends_with(&format!(":{port}/")));
+	e.stop().await.unwrap();
+	assert!(!e.state().advertising);
+}

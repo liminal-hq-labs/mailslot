@@ -61,6 +61,8 @@ pub struct MailslotLink {
 	pub tls: bool,
 	/// Public-key pin (base64 SHA-256 of the SPKI) for self-signed HTTPS.
 	pub pin: Option<String>,
+	/// Name of the link; senders use it as their sender label.
+	pub label: Option<String>,
 }
 
 impl MailslotLink {
@@ -72,7 +74,15 @@ impl MailslotLink {
 			token,
 			tls: false,
 			pin: None,
+			label: None,
 		}
+	}
+
+	/// Names the link.
+	pub fn with_label(mut self, label: impl Into<String>) -> Self {
+		let l = label.into();
+		self.label = (!l.trim().is_empty()).then_some(l);
+		self
 	}
 
 	/// Marks the link as HTTPS with an optional key pin.
@@ -113,10 +123,12 @@ impl MailslotLink {
 			Token::parse(token_text).map_err(|_| Error::InvalidLink("malformed token".into()))?;
 		let mut tls = scheme == "https";
 		let mut pin = None;
+		let mut label = None;
 		for (k, v) in url.query_pairs() {
 			match k.as_ref() {
 				"tls" => tls = v == "1" || v == "true",
 				"pin" => pin = Some(v.into_owned()),
+				"label" => label = Some(v.into_owned()).filter(|l| !l.trim().is_empty()),
 				_ => {}
 			}
 		}
@@ -126,6 +138,7 @@ impl MailslotLink {
 			token,
 			tls,
 			pin,
+			label,
 		})
 	}
 
@@ -151,19 +164,23 @@ impl MailslotLink {
 
 	/// The shareable `mailslot://` text.
 	pub fn to_uri(&self) -> String {
-		let mut s = format!("mailslot://{}/{}", self.authority(), self.token.expose());
-		let mut sep = '?';
+		let enc = |v: &str| {
+			percent_encoding::utf8_percent_encode(v, percent_encoding::NON_ALPHANUMERIC).to_string()
+		};
+		let mut query = Vec::new();
 		if self.tls {
-			s.push_str("?tls=1");
-			sep = '&';
+			query.push("tls=1".to_owned());
 		}
 		if let Some(pin) = &self.pin {
-			s.push(sep);
-			s.push_str("pin=");
-			s.push_str(
-				&percent_encoding::utf8_percent_encode(pin, percent_encoding::NON_ALPHANUMERIC)
-					.to_string(),
-			);
+			query.push(format!("pin={}", enc(pin)));
+		}
+		if let Some(label) = &self.label {
+			query.push(format!("label={}", enc(label)));
+		}
+		let mut s = format!("mailslot://{}/{}", self.authority(), self.token.expose());
+		if !query.is_empty() {
+			s.push('?');
+			s.push_str(&query.join("&"));
 		}
 		s
 	}
@@ -197,6 +214,23 @@ mod tests {
 		assert_eq!(b.pin.as_deref(), Some("AbC+/="));
 		assert_eq!(MailslotLink::parse(&b.to_uri()).unwrap(), b);
 		assert!(b.drop_url().starts_with("https://example.org:9000/"));
+	}
+
+	#[test]
+	fn labels_roundtrip() {
+		let l = MailslotLink::new("10.0.0.2", 8931, Token::parse(TOK).unwrap())
+			.with_label("Jules (CI)");
+		assert!(l.to_uri().ends_with("?label=Jules%20%28CI%29"));
+		assert_eq!(
+			MailslotLink::parse(&l.to_uri()).unwrap().label.as_deref(),
+			Some("Jules (CI)")
+		);
+		assert!(
+			MailslotLink::new("h", 1, Token::parse(TOK).unwrap())
+				.with_label("  ")
+				.label
+				.is_none()
+		);
 	}
 
 	#[test]

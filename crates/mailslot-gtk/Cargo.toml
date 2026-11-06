@@ -9,6 +9,7 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 publish = false
+readme = "README.md"
 keywords = ["gtk4", "libadwaita", "file-transfer", "upload"]
 categories = ["gui", "network-programming"]
 
@@ -21,12 +22,13 @@ name = "mailslot"
 path = "src/main.rs"
 
 [dependencies]
-mailslot-core = { workspace = true, features = ["server", "client", "portmap", "tls"] }
+mailslot-core = { workspace = true, features = ["server", "client", "portmap", "tls", "watch", "discovery"] }
 adw = { package = "libadwaita", version = "0.9", features = ["v1_8"] }
 gtk = { package = "gtk4", version = "0.11", features = ["v4_20"] }
 gettext-rs = { version = "0.8", default-features = false, features = ["gettext-system"] }
 futures-util.workspace = true
 qrcode = { version = "0.14", default-features = false }
+rqrr = "0.11"
 tokio.workspace = true
 tracing.workspace = true
 
@@ -38,17 +40,66 @@ tempfile = "3"
 
 [package.metadata.deb]
 name = "mailslot"
+maintainer = "Scott Morris <scott.moris@gmail.com>"
+copyright = "2026, Liminal HQ, Scott Morris"
+license-file = ["../../LICENSE-MIT", "0"]
 section = "net"
 priority = "optional"
-extended-description = "Mailslot gives you a private link anyone can use to send you files from a browser or the command line. Files land in a folder you choose, with a SHA-256 checksum, and nothing is ever served back."
+depends = "$auto, libgtk-4-1 (>= 4.20), libadwaita-1-0 (>= 1.8)"
+recommends = "xdg-desktop-portal"
+provides = "mailslot-cli"
+conflicts = "mailslot-cli"
+replaces = "mailslot-cli"
+extended-description = """\
+Mailslot receives files through a private link. Start sharing, hand out the \
+link, and files sent to it land in a folder with a SHA-256 checksum. Nothing \
+is ever served back.
+ .
+It also sends: the Send page and the mailslot-cli command push files to \
+another Mailslot, resume interrupted transfers and skip files the other side \
+already has. Includes the mailslot-cli command."""
 assets = [
 	["target/release/mailslot", "usr/bin/", "755"],
-	["../../target/release/mailslot-cli", "usr/bin/", "755"],
+	["target/release/mailslot-cli", "usr/bin/", "755"],
+	["../../data/ca.liminalhq.mailslot.desktop", "usr/share/applications/", "644"],
+	["../../data/ca.liminalhq.mailslot.metainfo.xml", "usr/share/metainfo/", "644"],
+	["../../data/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
+	["../../data/icons/hicolor/symbolic/apps/ca.liminalhq.mailslot-symbolic.svg", "usr/share/icons/hicolor/symbolic/apps/", "644"],
+	["../../data/man/mailslot-cli.1", "usr/share/man/man1/", "644"],
+	["../../data/completions/mailslot-cli.bash", "usr/share/bash-completion/completions/mailslot-cli", "644"],
+	["../../data/completions/mailslot-cli.fish", "usr/share/fish/vendor_completions.d/mailslot-cli.fish", "644"],
+	["../../data/completions/_mailslot-cli", "usr/share/zsh/vendor-completions/_mailslot-cli", "644"],
+	["../../LICENSE-APACHE", "usr/share/doc/mailslot/", "644"],
+	["../../LICENSE-MIT", "usr/share/doc/mailslot/", "644"],
+	["../../README.md", "usr/share/doc/mailslot/", "644"],
 ]
 
 [package.metadata.generate-rpm]
 name = "mailslot"
-summary = "Private file drop for the GNOME desktop"
+summary = "A private drop slot for files sent your way"
+description = """\
+Mailslot receives files through a private link. Start sharing, hand out the link, and files sent to it land in a folder with a SHA-256 checksum. Nothing is ever served back. It also sends: the Send page and the mailslot-cli command push files to another Mailslot, resume interrupted transfers and skip files the other side already has. Includes the mailslot-cli command."""
+license = "Apache-2.0 OR MIT"
+url = "https://github.com/liminal-hq/mailslot"
+vendor = "Liminal HQ"
+release = "1"
+auto-req = "auto"
+requires = { gtk4 = ">= 4.20", libadwaita = ">= 1.8" }
+recommends = { xdg-desktop-portal = "*" }
+conflicts = { mailslot-cli = "*" }
+obsoletes = { mailslot-cli = "< 0.1.0" }
 assets = [
 	{ source = "target/release/mailslot", dest = "/usr/bin/mailslot", mode = "755" },
+	{ source = "target/release/mailslot-cli", dest = "/usr/bin/mailslot-cli", mode = "755" },
+	{ source = "../../data/ca.liminalhq.mailslot.desktop", dest = "/usr/share/applications/ca.liminalhq.mailslot.desktop", mode = "644" },
+	{ source = "../../data/ca.liminalhq.mailslot.metainfo.xml", dest = "/usr/share/metainfo/ca.liminalhq.mailslot.metainfo.xml", mode = "644" },
+	{ source = "../../data/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg", dest = "/usr/share/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg", mode = "644" },
+	{ source = "../../data/icons/hicolor/symbolic/apps/ca.liminalhq.mailslot-symbolic.svg", dest = "/usr/share/icons/hicolor/symbolic/apps/ca.liminalhq.mailslot-symbolic.svg", mode = "644" },
+	{ source = "../../data/man/mailslot-cli.1", dest = "/usr/share/man/man1/mailslot-cli.1", mode = "644", doc = true },
+	{ source = "../../data/completions/mailslot-cli.bash", dest = "/usr/share/bash-completion/completions/mailslot-cli", mode = "644" },
+	{ source = "../../data/completions/mailslot-cli.fish", dest = "/usr/share/fish/vendor_completions.d/mailslot-cli.fish", mode = "644" },
+	{ source = "../../data/completions/_mailslot-cli", dest = "/usr/share/zsh/site-functions/_mailslot-cli", mode = "644" },
+	{ source = "../../LICENSE-APACHE", dest = "/usr/share/licenses/mailslot/LICENSE-APACHE", mode = "644", doc = true },
+	{ source = "../../LICENSE-MIT", dest = "/usr/share/licenses/mailslot/LICENSE-MIT", mode = "644", doc = true },
+	{ source = "../../README.md", dest = "/usr/share/doc/mailslot/README.md", mode = "644", doc = true },
 ]

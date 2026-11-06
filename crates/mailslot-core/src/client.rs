@@ -470,7 +470,7 @@ impl Client {
 				format!("bytes {off}-{}/{size}", size - 1),
 			);
 		}
-		if let Some(label) = &self.opts.sender_label {
+		if let Some(label) = self.opts.sender_label.as_ref().or(self.link.label.as_ref()) {
 			req = req.header(proto::HDR_SENDER, label.as_str());
 		}
 		let resp = match req.body(reqwest::Body::wrap_stream(stream)).send().await {
@@ -586,7 +586,7 @@ impl Client {
 			.http
 			.put(self.link.file_url(name))
 			.header(reqwest::header::ACCEPT, "application/json");
-		if let Some(label) = &self.opts.sender_label {
+		if let Some(label) = self.opts.sender_label.as_ref().or(self.link.label.as_ref()) {
 			req = req.header(proto::HDR_SENDER, label.as_str());
 		}
 		let resp = req

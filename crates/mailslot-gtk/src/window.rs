@@ -73,6 +73,17 @@ mod imp {
 		#[template_child]
 		pub send_list: TemplateChild<gtk::ListBox>,
 		#[template_child]
+		pub pause_button: TemplateChild<gtk::Button>,
+		#[template_child]
+		pub scan_file_row: TemplateChild<adw::ButtonRow>,
+		#[template_child]
+		pub scan_clipboard_row: TemplateChild<adw::ButtonRow>,
+		#[template_child]
+		pub nearby_row: TemplateChild<adw::ButtonRow>,
+		#[template_child]
+		pub nearby_group: TemplateChild<adw::PreferencesGroup>,
+		pub nearby_rows: RefCell<Vec<adw::ActionRow>>,
+		#[template_child]
 		pub history_stack: TemplateChild<gtk::Stack>,
 		#[template_child]
 		pub history_list: TemplateChild<gtk::ListBox>,
@@ -282,6 +293,9 @@ impl MailslotWindow {
 				win.copy_snippet(&kind);
 			})
 			.build();
+		let pause = gio::ActionEntry::builder("toggle-pause")
+			.activate(|win: &Self, _, _| win.toggle_pause())
+			.build();
 		let new_link = gio::ActionEntry::builder("new-link")
 			.activate(|win: &Self, _, _| win.confirm_new_link())
 			.build();
@@ -317,6 +331,7 @@ impl MailslotWindow {
 			.build();
 		self.add_action_entries([
 			toggle,
+			pause,
 			copy_link,
 			copy_external,
 			copy_snippet,
@@ -405,6 +420,21 @@ impl MailslotWindow {
 			#[weak(rename_to = win)]
 			self,
 			move |_| win.choose_to_send(true)
+		));
+		imp.scan_file_row.connect_activated(glib::clone!(
+			#[weak(rename_to = win)]
+			self,
+			move |_| win.scan_from_file()
+		));
+		imp.scan_clipboard_row.connect_activated(glib::clone!(
+			#[weak(rename_to = win)]
+			self,
+			move |_| win.scan_from_clipboard()
+		));
+		imp.nearby_row.connect_activated(glib::clone!(
+			#[weak(rename_to = win)]
+			self,
+			move |_| win.look_for_nearby()
 		));
 		self.connect_is_active_notify(|win| {
 			if win.is_active() {
@@ -509,6 +539,17 @@ impl MailslotWindow {
 		let sharing = st.status == Status::Sharing;
 		imp.share_stack
 			.set_visible_child_name(if sharing { "running" } else { "stopped" });
+		imp.pause_button.set_visible(sharing);
+		imp.pause_button.set_icon_name(if st.paused {
+			"media-playback-start-symbolic"
+		} else {
+			"media-playback-pause-symbolic"
+		});
+		imp.pause_button.set_tooltip_text(Some(&if st.paused {
+			gettext("Resume accepting files (Ctrl+Shift+P)")
+		} else {
+			gettext("Pause accepting files (Ctrl+Shift+P)")
+		}));
 		let busy = matches!(st.status, Status::Starting | Status::Stopping);
 		imp.start_button.set_sensitive(!busy);
 		imp.start_button.set_label(&if sharing {
@@ -596,6 +637,15 @@ impl MailslotWindow {
 					#[weak(rename_to = win)]
 					self,
 					move || win.show_manual_instructions()
+				))),
+			),
+			_ if st.paused && sharing => self.show_banner(
+				&gettext("Paused. Senders are told you are not accepting files."),
+				Some(&gettext("Resume")),
+				Some(Rc::new(glib::clone!(
+					#[weak(rename_to = win)]
+					self,
+					move || win.toggle_pause()
 				))),
 			),
 			_ if st.restart_required && sharing => self.show_banner(
@@ -746,6 +796,21 @@ impl MailslotWindow {
 			),
 			other => self.show_banner(&other.to_string(), None, None),
 		}
+	}
+
+	fn toggle_pause(&self) {
+		let win = self.clone();
+		glib::spawn_future_local(async move {
+			let engine = win.bridge().engine().clone();
+			let result = if engine.state().paused {
+				engine.resume().await
+			} else {
+				engine.pause().await
+			};
+			if let Err(e) = result {
+				win.toast(&e.to_string());
+			}
+		});
 	}
 
 	fn restart_sharing(&self) {
@@ -1013,6 +1078,111 @@ impl MailslotWindow {
 				}
 			};
 			win.send_paths(paths);
+		});
+	}
+
+	/// Puts scanned or discovered text into the link field when it is a Mailslot link.
+	fn apply_scanned(&self, text: &str) {
+		match MailslotLink::parse(text.trim()) {
+			Ok(_) => {
+				self.imp().send_link_entry.set_text(text.trim());
+				self.toast(&gettext("Link found"));
+			}
+			Err(_) => self.toast(&gettext("That QR code is not a Mailslot link")),
+		}
+	}
+
+	/// Reads a QR code from an image and fills the Send page link field when it is a Mailslot link.
+	pub fn scan_texture(&self, texture: gdk::Texture) {
+		let win = self.clone();
+		glib::spawn_future_local(async move {
+			let Some((w, h, luma)) = crate::qr::texture_luma(&texture) else {
+				win.toast(&gettext("Could not read that image"));
+				return;
+			};
+			// Decoding is plain CPU work on plain bytes, so it can leave the main thread.
+			match gio::spawn_blocking(move || crate::qr::decode_luma(w, h, &luma)).await {
+				Ok(Some(text)) => win.apply_scanned(&text),
+				_ => win.toast(&gettext("No QR code found in that image")),
+			}
+		});
+	}
+
+	fn scan_from_file(&self) {
+		let win = self.clone();
+		glib::spawn_future_local(async move {
+			let filter = gtk::FileFilter::new();
+			filter.set_name(Some(&gettext("Images")));
+			filter.add_mime_type("image/*");
+			let filters = gio::ListStore::new::<gtk::FileFilter>();
+			filters.append(&filter);
+			let dialog = gtk::FileDialog::new();
+			dialog.set_title(&gettext("Choose an image with a QR code"));
+			dialog.set_filters(Some(&filters));
+			let Ok(file) = dialog.open_future(Some(&win)).await else {
+				return;
+			};
+			match gdk::Texture::from_file(&file) {
+				Ok(t) => win.scan_texture(t),
+				Err(_) => win.toast(&gettext("Could not open that image")),
+			}
+		});
+	}
+
+	fn scan_from_clipboard(&self) {
+		let win = self.clone();
+		glib::spawn_future_local(async move {
+			match win.clipboard().read_texture_future().await {
+				Ok(Some(t)) => win.scan_texture(t),
+				_ => win.toast(&gettext("The clipboard has no image")),
+			}
+		});
+	}
+
+	fn look_for_nearby(&self) {
+		let win = self.clone();
+		glib::spawn_future_local(async move {
+			let imp = win.imp();
+			imp.nearby_row.set_sensitive(false);
+			imp.nearby_row.set_title(&gettext("Looking…"));
+			let peers = win
+				.bridge()
+				.engine()
+				.discover_peers(std::time::Duration::from_secs(3))
+				.await
+				.unwrap_or_default();
+			for row in imp.nearby_rows.borrow_mut().drain(..) {
+				imp.nearby_group.remove(&row);
+			}
+			for peer in &peers {
+				let row = adw::ActionRow::new();
+				row.set_title(&glib::markup_escape_text(&peer.instance));
+				let addrs: Vec<String> = peer.addresses.iter().map(ToString::to_string).collect();
+				let mut sub = format!("{}:{}", addrs.join(", "), peer.port);
+				if let Some(l) = &peer.label {
+					sub.push_str(&format!(" · {l}"));
+				}
+				row.set_subtitle(&glib::markup_escape_text(&sub));
+				row.set_activatable(true);
+				let partial = peer.partial_link();
+				let weak = win.downgrade();
+				row.connect_activated(move |_| {
+					if let Some(win) = weak.upgrade() {
+						win.imp().send_link_entry.set_text(&partial);
+						win.toast(&gettext("Add the secret from the link you were given"));
+					}
+				});
+				row.add_suffix(&gtk::Image::from_icon_name("go-next-symbolic"));
+				imp.nearby_group.add(&row);
+				imp.nearby_rows.borrow_mut().push(row);
+			}
+			if peers.is_empty() {
+				win.toast(&gettext(
+					"No nearby shares found. They appear only while sharing with network announcements turned on.",
+				));
+			}
+			imp.nearby_row.set_title(&gettext("Look for nearby shares"));
+			imp.nearby_row.set_sensitive(true);
 		});
 	}
 

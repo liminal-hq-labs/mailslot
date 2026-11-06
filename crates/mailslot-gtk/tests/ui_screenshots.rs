@@ -40,6 +40,11 @@ fn screenshots() {
 	let dir = std::path::PathBuf::from(dir);
 	std::fs::create_dir_all(&dir).unwrap();
 	init();
+	// Make the repository's app icon visible to the icon theme so the screenshots show it.
+	let icons = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/icons");
+	if let Some(display) = gtk::gdk::Display::default() {
+		gtk::IconTheme::for_display(&display).add_search_path(&icons);
+	}
 	let tmp = tempfile::tempdir().unwrap();
 	let (_app, win, bridge) = make_window(tmp.path());
 	win.set_default_size(760, 1040);
