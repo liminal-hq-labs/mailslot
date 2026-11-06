@@ -16,16 +16,19 @@ pub mod qr;
 pub mod widgets;
 pub mod window;
 
-pub use application::{APP_ID, build_application, build_engine, init_resources, load_css, run};
+pub use application::{
+	APP_ID, build_application, build_engine, init_resources, load_css, load_icons, run,
+};
 pub use bridge::Bridge;
 pub use window::MailslotWindow;
 
-/// Initializes GTK and libadwaita, registers resources and loads the stylesheet.
+/// Initializes GTK and libadwaita, registers resources, adds the bundled icons and loads the stylesheet.
 /// Tests call this once on their only thread; the app does it through GApplication.
 pub fn init_for_tests() -> Result<(), gtk::glib::BoolError> {
 	gtk::init()?;
 	adw::init()?;
 	init_resources();
+	load_icons();
 	load_css();
 	Ok(())
 }
