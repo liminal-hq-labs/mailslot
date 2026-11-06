@@ -189,7 +189,7 @@ fn completions_and_man_are_generated() {
 }
 
 fn run_watch_for(secs: u64, dir: &Path, link: &str, state: &Path) -> String {
-	let mut child = Command::new(BIN)
+	let child = Command::new(BIN)
 		.args(["watch", "--json", "--debounce-ms", "200", "--state"])
 		.arg(state)
 		.arg(dir)
