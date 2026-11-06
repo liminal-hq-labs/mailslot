@@ -36,7 +36,7 @@ Run `make help` for the list. The ones you will use most:
 | `make test-ui` | Display tests under headless weston (`UI_BACKEND=x11` for Xvfb) |
 | `make smoke` | `curl -T` and `mailslot-cli` round trips against a local headless server |
 | `make upnp-test` | Port mapping against miniupnpd on isolated Docker networks |
-| `make data-check` | Desktop file, AppStream, XML, icons, banner and the systemd unit |
+| `make data-check` | Desktop file, AppStream, XML, icons, banner, the systemd unit and the architecture diagrams |
 | `make pot` | Regenerate the translation template and merge it into the catalogues |
 | `make validate` | Everything, the same as CI |
 | `make run` | The GUI from the image on your Wayland session |
@@ -89,9 +89,28 @@ Every user-facing string goes through `gettext`, and `.ui` strings are marked `t
 
 ## Checking the data files
 
-`make data-check` validates the desktop file with `desktop-file-validate`, the AppStream metadata with `appstreamcli validate --no-net`, every XML, `.ui` and SVG file with `xmllint`, renders both icons, validates the banner and checks the shell completions.
+`make data-check` validates the desktop file with `desktop-file-validate`, the AppStream metadata with `appstreamcli validate --no-net`, every XML, `.ui` and SVG file with `xmllint`, renders both icons, validates the banner and the architecture diagrams, and checks the shell completions.
 
 The banner is `assets/hero.svg`. It must stay under 60 KB, contain no scripts or external references, and handle `prefers-color-scheme` and `prefers-reduced-motion`. The wordmark is outlined text between the `hero-text` markers.
+
+### Architecture diagrams
+
+The diagrams in `docs/diagrams/` are animated SVG with the same rules as the banner, and `scripts/check-diagrams.sh` checks them in two passes.
+
+- **Static** (inside the dev image, from `check-data.sh`): `xmllint`, no scripts, `foreignObject`, images, external references or web fonts, at most 60 KB, the licence header, `<title>`, `<desc>`, `role="img"`, `viewBox`, `data-loop`, both media queries, tabs, and font stacks that end in `sans-serif` or `monospace`.
+- **Text fit** (`scripts/diagram-fit.py` with `diagram-fit.js`): loads each diagram in headless Chromium, steps through one loop every quarter second in light, dark and reduced motion, measures every label with the native fonts and again with DejaVu Sans and Liberation Sans, and fails when a label comes within 4 px of its box, crosses another box, overlaps another label or sits on a line, when contrast drops below 4.5, when an animation is still visible under reduced motion, or when one jumps at the loop point. The dev image has no browser, so `make data-check` runs this pass on the host and skips it with a notice when Chromium is missing. CI runs it in the `diagrams` job with the runner's Chrome.
+
+The checker relies on a few conventions:
+
+- The root `<svg>` has `data-loop="<seconds>"`. Every animation repeats indefinitely, starts at 0 and lasts a whole fraction of the loop.
+- A shape that holds text has an `id` and `data-box`, and each `<text>` inside it has `data-for="<id>"`. Connectors have `data-line`. The background has `data-bg`.
+- Everything that moves sits in a `.motion` group that `prefers-reduced-motion: reduce` hides, and a `.static` group shows the finished frame instead.
+
+To look at frames while drawing, write screenshots somewhere outside the repository:
+
+```sh
+python3 scripts/diagram-fit.py --shots /tmp/frames --times 0,2.5,5,7.5 docs/diagrams/upload-lifecycle.svg
+```
 
 ## Continuous integration
 

@@ -1,0 +1,263 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Mailslot architecture diagram: how mailslot-ipc exposes the engine to clients in any language over a Unix socket.
+	Light by default, dark through prefers-color-scheme, a complete still frame under prefers-reduced-motion.
+
+	(c) Copyright 2026 Liminal HQ, Scott Morris
+	SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-labelledby="title desc" data-loop="10">
+	<title id="title">Mailslot IPC daemon</title>
+	<desc id="desc">Clients in any language (a Python script, a Qt or C++ app, or Rust through mailslot_ipc::Client) connect to the Unix socket mailslotd.sock under $XDG_RUNTIME_DIR, whose folder is mode 0700 and socket 0600 and which is never TCP. They speak newline-delimited JSON-RPC 2.0 to the Daemon, which runs in mailslotd or embedded in your own process and calls the Engine. After subscribe, the daemon forwards every engine event as an event notification. Animated: the client subscribes, calls start, receives a StateChanged event and the reply with the new state, then an Upload Finished event. Engine errors use code -32000. mailslotd exits on SIGTERM, SIGINT or the shutdown method, removing its socket and any router mapping, and runs as the systemd user unit mailslotd.service.</desc>
+
+	<style>
+		.ui { font-family: ui-sans-serif, system-ui, sans-serif; }
+		.mono { font-family: ui-monospace, monospace; }
+		.bg-a { stop-color: #ffffff; }
+		.bg-b { stop-color: #eaf0fa; }
+		.ink { fill: #161c2d; }
+		.muted { fill: #4b566e; }
+		.red-ink { fill: #b81d32; }
+		.white { fill: #ffffff; }
+		.panel { fill: #f5f7fc; stroke: #d3dbea; }
+		.card { fill: #ffffff; stroke: #c3cce0; }
+		.engine { fill: #fdf0f2; stroke: #eaa6af; }
+		.wire { fill: none; stroke: #7d89a3; stroke-width: 1.6; }
+		.soft { stroke-dasharray: 4 4; }
+		.arrow { fill: #7d89a3; }
+		.static { display: none; }
+		@media (prefers-color-scheme: dark) {
+			.bg-a { stop-color: #0d1220; }
+			.bg-b { stop-color: #161d33; }
+			.ink { fill: #f4f6fb; }
+			.muted { fill: #b8c2d8; }
+			.red-ink { fill: #ff8a96; }
+			.panel { fill: #131a2c; stroke: #2a3452; }
+			.card { fill: #1c243a; stroke: #36425f; }
+			.engine { fill: #2a1622; stroke: #7a2e3c; }
+			.wire { stroke: #8b97b1; }
+			.arrow { fill: #8b97b1; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			.motion { display: none; }
+			.static { display: inline; }
+		}
+	</style>
+
+	<defs>
+		<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+			<stop class="bg-a" offset="0"/>
+			<stop class="bg-b" offset="1"/>
+		</linearGradient>
+		<linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#d6334a"/>
+			<stop offset="1" stop-color="#a8172c"/>
+		</linearGradient>
+		<linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#2a6fe0"/>
+			<stop offset="1" stop-color="#1a52b8"/>
+		</linearGradient>
+		<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+			<path class="arrow" d="M0 1 L10 5 L0 9 z"/>
+		</marker>
+		<path id="p-c" d="M220 92 C 250 92, 250 140, 274 140"/>
+		<path id="p-sd" d="M436 148 H 490"/>
+		<path id="p-ds" d="M490 180 H 438"/>
+		<path id="p-de" d="M692 148 H 742"/>
+		<path id="p-ed" d="M742 180 H 694"/>
+	</defs>
+
+	<rect data-bg="" width="960" height="540" rx="16" fill="url(#bg)"/>
+
+	<!-- Clients -->
+	<rect id="clients" data-box="" class="panel" x="16" y="16" width="220" height="268" rx="14"/>
+	<text data-for="clients" class="ui muted" x="32" y="44" font-size="11" font-weight="700" letter-spacing="1">CLIENTS</text>
+	<rect id="c-py" data-box="" class="card" x="32" y="64" width="188" height="56" rx="10"/>
+	<text data-for="c-py" class="ui ink" x="48" y="88" font-size="13" font-weight="700">Python</text>
+	<text data-for="c-py" class="ui muted" x="48" y="106" font-size="11">a short script</text>
+	<rect id="c-qt" data-box="" class="card" x="32" y="136" width="188" height="56" rx="10"/>
+	<text data-for="c-qt" class="ui ink" x="48" y="160" font-size="13" font-weight="700">Qt / C++</text>
+	<text data-for="c-qt" class="ui muted" x="48" y="178" font-size="11">another desktop shell</text>
+	<rect id="c-rs" data-box="" class="card" x="32" y="208" width="188" height="56" rx="10"/>
+	<text data-for="c-rs" class="ui ink" x="48" y="232" font-size="13" font-weight="700">Rust</text>
+	<text data-for="c-rs" class="mono muted" x="48" y="250" font-size="11">mailslot_ipc::Client</text>
+
+	<!-- Socket -->
+	<rect id="socket" data-box="" class="card" x="276" y="100" width="160" height="128" rx="10"/>
+	<text data-for="socket" class="ui ink" x="290" y="126" font-size="13" font-weight="700">Unix socket</text>
+	<text data-for="socket" class="mono muted" x="290" y="146" font-size="11">mailslotd.sock</text>
+	<text data-for="socket" class="ui muted" x="290" y="166" font-size="11">folder 0700,</text>
+	<text data-for="socket" class="ui muted" x="290" y="182" font-size="11">socket 0600</text>
+	<text data-for="socket" class="ui muted" x="290" y="202" font-size="11">never TCP</text>
+	<text class="mono muted" x="276" y="250" font-size="11">$XDG_RUNTIME_DIR/</text>
+	<text class="mono muted" x="276" y="266" font-size="11">ca.liminalhq.mailslot/</text>
+
+	<!-- Process -->
+	<rect id="proc" data-box="" class="panel" x="476" y="16" width="468" height="268" rx="14"/>
+	<text data-for="proc" class="ui muted" x="492" y="44" font-size="11" font-weight="700" letter-spacing="1">MAILSLOTD, OR YOUR OWN PROCESS</text>
+	<rect id="daemon" data-box="" class="card" x="492" y="100" width="200" height="128" rx="10"/>
+	<text data-for="daemon" class="ui ink" x="508" y="126" font-size="13" font-weight="700">Daemon</text>
+	<text data-for="daemon" class="ui muted" x="508" y="146" font-size="11">JSON-RPC 2.0,</text>
+	<text data-for="daemon" class="ui muted" x="508" y="162" font-size="11">one object per line</text>
+	<text data-for="daemon" class="ui muted" x="508" y="186" font-size="11">subscribe: forwards</text>
+	<text data-for="daemon" class="ui muted" x="508" y="202" font-size="11">every engine event</text>
+	<rect id="engine" data-box="" x="744" y="100" width="184" height="128" rx="10" fill="url(#red)"/>
+	<text data-for="engine" class="ui white" x="760" y="126" font-size="13" font-weight="700">Engine</text>
+	<text data-for="engine" class="mono white" x="760" y="146" font-size="11">mailslot-core</text>
+	<text data-for="engine" class="ui white" x="760" y="170" font-size="11">start, stop, pause,</text>
+	<text data-for="engine" class="ui white" x="760" y="186" font-size="11">rotate_token, send</text>
+	<text data-for="engine" class="mono white" x="760" y="206" font-size="11">subscribe()</text>
+	<text data-for="proc" class="ui muted" x="492" y="262" font-size="11">One engine; the GTK app and mailslot-cli link it directly.</text>
+
+	<!-- Wires -->
+	<use data-line="" href="#p-c" class="wire" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M220 164 H 274" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M220 236 C 250 236, 250 188, 274 188" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-sd" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-ds" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-de" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-ed" class="wire" marker-end="url(#arr)"/>
+	<text data-for="proc" class="ui muted" x="718" y="138" font-size="11" text-anchor="middle">calls</text>
+	<text data-for="proc" class="ui muted" x="718" y="200" font-size="11" text-anchor="middle">events</text>
+
+	<!-- On the wire -->
+	<rect id="log" data-box="" class="panel" x="16" y="300" width="648" height="224" rx="14"/>
+	<text data-for="log" class="ui muted" x="32" y="326" font-size="11" font-weight="700" letter-spacing="1">ON THE WIRE, ONE LINE EACH</text>
+
+	<rect id="life" data-box="" class="panel" x="680" y="300" width="264" height="224" rx="14"/>
+	<text data-for="life" class="ui muted" x="696" y="326" font-size="11" font-weight="700" letter-spacing="1">ERRORS</text>
+	<text data-for="life" class="mono ink" x="696" y="348" font-size="11">-32000 engine error</text>
+	<text data-for="life" class="mono ink" x="696" y="366" font-size="11">-32601 unknown method</text>
+	<text data-for="life" class="mono ink" x="696" y="384" font-size="11">-32602 invalid params</text>
+	<text data-for="life" class="ui muted" x="696" y="420" font-size="11" font-weight="700" letter-spacing="1">LIFECYCLE</text>
+	<text data-for="life" class="ui ink" x="696" y="442" font-size="11">Exits on SIGTERM, SIGINT</text>
+	<text data-for="life" class="ui ink" x="696" y="458" font-size="11">or the shutdown method,</text>
+	<text data-for="life" class="ui ink" x="696" y="474" font-size="11">removing socket and mapping.</text>
+	<text data-for="life" class="ui muted" x="696" y="498" font-size="11">systemd user unit:</text>
+	<text data-for="life" class="mono muted" x="696" y="514" font-size="11">mailslotd.service</text>
+
+	<!-- Motion: subscribe, start, then events stream back -->
+	<g class="motion">
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.016;0.02;0.08;0.086;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.02;0.08;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-c"/></animateMotion>
+			<circle r="5" fill="url(#blue)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.081;0.085;0.125;0.131;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.085;0.125;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-sd"/></animateMotion>
+			<circle r="5" fill="url(#blue)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.141;0.145;0.185;0.191;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.145;0.185;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-ds"/></animateMotion>
+			<circle r="5" fill="url(#red)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.186;0.19;0.25;0.256;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.19;0.25;1" keyPoints="1;1;0;0" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-c"/></animateMotion>
+			<circle r="5" fill="url(#red)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.276;0.28;0.34;0.346;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.28;0.34;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-c"/></animateMotion>
+			<circle r="5" fill="url(#blue)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.341;0.345;0.385;0.391;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.345;0.385;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-sd"/></animateMotion>
+			<circle r="5" fill="url(#blue)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.386;0.39;0.43;0.436;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.39;0.43;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-de"/></animateMotion>
+			<circle r="5" fill="url(#blue)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.446;0.45;0.49;0.496;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.45;0.49;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-ed"/></animateMotion>
+			<circle r="5" fill="url(#red)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.491;0.495;0.535;0.541;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.495;0.535;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-ds"/></animateMotion>
+			<circle r="5" fill="url(#red)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.536;0.54;0.6;0.606;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.54;0.6;1" keyPoints="1;1;0;0" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-c"/></animateMotion>
+			<circle r="5" fill="url(#red)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.551;0.555;0.595;0.601;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.555;0.595;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-ds"/></animateMotion>
+			<circle r="5" fill="url(#red)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.596;0.6;0.66;0.666;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.6;0.66;1" keyPoints="1;1;0;0" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-c"/></animateMotion>
+			<circle r="5" fill="url(#red)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.696;0.7;0.74;0.746;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.7;0.74;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-ed"/></animateMotion>
+			<circle r="5" fill="url(#red)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.741;0.745;0.785;0.791;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.745;0.785;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-ds"/></animateMotion>
+			<circle r="5" fill="url(#red)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.786;0.79;0.85;0.856;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.79;0.85;1" keyPoints="1;1;0;0" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-c"/></animateMotion>
+			<circle r="5" fill="url(#red)" stroke="#ffffff" stroke-width="1.2"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.03;0.055;0.93;0.96;1" values="0;0;1;1;0;0"/>
+			<rect id="m1a" data-box="" class="card" x="32" y="336" width="616" height="26" rx="6"/>
+			<text data-for="m1a" class="mono ink" x="44" y="353" font-size="11"><tspan class="ui" font-weight="700">→</tspan> {"jsonrpc":"2.0","id":1,"method":"subscribe"}</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.2;0.225;0.93;0.96;1" values="0;0;1;1;0;0"/>
+			<rect id="m2a" data-box="" class="card" x="32" y="366" width="616" height="26" rx="6"/>
+			<text data-for="m2a" class="mono red-ink" x="44" y="383" font-size="11"><tspan class="ui" font-weight="700">←</tspan> {"jsonrpc":"2.0","id":1,"result":true}</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.29;0.315;0.93;0.96;1" values="0;0;1;1;0;0"/>
+			<rect id="m3a" data-box="" class="card" x="32" y="396" width="616" height="26" rx="6"/>
+			<text data-for="m3a" class="mono ink" x="44" y="413" font-size="11"><tspan class="ui" font-weight="700">→</tspan> {"jsonrpc":"2.0","id":2,"method":"start"}</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.55;0.575;0.93;0.96;1" values="0;0;1;1;0;0"/>
+			<rect id="m4a" data-box="" class="card" x="32" y="426" width="616" height="26" rx="6"/>
+			<text data-for="m4a" class="mono red-ink" x="44" y="443" font-size="11"><tspan class="ui" font-weight="700">←</tspan> {"jsonrpc":"2.0","method":"event","params":{"StateChanged":{…}}}</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.61;0.635;0.93;0.96;1" values="0;0;1;1;0;0"/>
+			<rect id="m5a" data-box="" class="card" x="32" y="456" width="616" height="26" rx="6"/>
+			<text data-for="m5a" class="mono red-ink" x="44" y="473" font-size="11"><tspan class="ui" font-weight="700">←</tspan> {"jsonrpc":"2.0","id":2,"result":{"status":"Sharing",…}}</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.8;0.825;0.93;0.96;1" values="0;0;1;1;0;0"/>
+			<rect id="m6a" data-box="" class="card" x="32" y="486" width="616" height="26" rx="6"/>
+			<text data-for="m6a" class="mono red-ink" x="44" y="503" font-size="11"><tspan class="ui" font-weight="700">←</tspan> {"jsonrpc":"2.0","method":"event","params":{"Upload":{"Finished":{…}}}}</text>
+		</g>
+	</g>
+
+	<!-- Still frame for reduced motion: the whole exchange -->
+	<g class="static">
+		<rect id="m1s" data-box="" class="card" x="32" y="336" width="616" height="26" rx="6"/>
+		<text data-for="m1s" class="mono ink" x="44" y="353" font-size="11"><tspan class="ui" font-weight="700">→</tspan> {"jsonrpc":"2.0","id":1,"method":"subscribe"}</text>
+		<rect id="m2s" data-box="" class="card" x="32" y="366" width="616" height="26" rx="6"/>
+		<text data-for="m2s" class="mono red-ink" x="44" y="383" font-size="11"><tspan class="ui" font-weight="700">←</tspan> {"jsonrpc":"2.0","id":1,"result":true}</text>
+		<rect id="m3s" data-box="" class="card" x="32" y="396" width="616" height="26" rx="6"/>
+		<text data-for="m3s" class="mono ink" x="44" y="413" font-size="11"><tspan class="ui" font-weight="700">→</tspan> {"jsonrpc":"2.0","id":2,"method":"start"}</text>
+		<rect id="m4s" data-box="" class="card" x="32" y="426" width="616" height="26" rx="6"/>
+		<text data-for="m4s" class="mono red-ink" x="44" y="443" font-size="11"><tspan class="ui" font-weight="700">←</tspan> {"jsonrpc":"2.0","method":"event","params":{"StateChanged":{…}}}</text>
+		<rect id="m5s" data-box="" class="card" x="32" y="456" width="616" height="26" rx="6"/>
+		<text data-for="m5s" class="mono red-ink" x="44" y="473" font-size="11"><tspan class="ui" font-weight="700">←</tspan> {"jsonrpc":"2.0","id":2,"result":{"status":"Sharing",…}}</text>
+		<rect id="m6s" data-box="" class="card" x="32" y="486" width="616" height="26" rx="6"/>
+		<text data-for="m6s" class="mono red-ink" x="44" y="503" font-size="11"><tspan class="ui" font-weight="700">←</tspan> {"jsonrpc":"2.0","method":"event","params":{"Upload":{"Finished":{…}}}}</text>
+	</g>
+</svg>

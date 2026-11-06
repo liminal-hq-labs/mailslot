@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Mailslot architecture diagram: the four crates, the dependency direction and the feature flags of mailslot-core.
+	Light by default, dark through prefers-color-scheme, a complete still frame under prefers-reduced-motion.
+
+	(c) Copyright 2026 Liminal HQ, Scott Morris
+	SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="496" viewBox="0 0 960 496" role="img" aria-labelledby="title desc" data-loop="12">
+	<title id="title">Mailslot crate layers</title>
+	<desc id="desc">Three frontends sit on top: mailslot-gtk (the mailslot GTK app), mailslot-cli and mailslot-ipc (the mailslotd daemon), plus your own app. All depend downwards on mailslot-core, which has no GTK or UI dependency and is split into modules and six feature flags: server, client, portmap, tls, watch (which implies client) and discovery, all on by default. Below it are the third-party crates each feature pulls in. Animated: each frontend's dependency arrow pulses and all six features light up with their crates; then an app that enables only client lights client and reqwest alone, so it links no axum and has no Engine.</desc>
+
+	<style>
+		.ui { font-family: ui-sans-serif, system-ui, sans-serif; }
+		.mono { font-family: ui-monospace, monospace; }
+		.bg-a { stop-color: #ffffff; }
+		.bg-b { stop-color: #eaf0fa; }
+		.ink { fill: #161c2d; }
+		.muted { fill: #4b566e; }
+		.red-ink { fill: #b81d32; }
+		.white { fill: #ffffff; }
+		.panel { fill: #f5f7fc; stroke: #d3dbea; }
+		.card { fill: #ffffff; stroke: #c3cce0; }
+		.engine { fill: #fdf0f2; stroke: #eaa6af; }
+		.wire { fill: none; stroke: #7d89a3; stroke-width: 1.6; }
+		.soft { stroke-dasharray: 4 4; }
+		.arrow { fill: #7d89a3; }
+		.ring { fill: none; stroke: #2f7bea; stroke-width: 2.2; }
+		.lit { fill: #2f7bea; fill-opacity: 0.16; stroke: #2f7bea; stroke-width: 1.6; }
+		.edge { fill: none; stroke: #d6334a; stroke-width: 1.4; stroke-dasharray: 6 5; }
+		.static { display: none; }
+		@media (prefers-color-scheme: dark) {
+			.bg-a { stop-color: #0d1220; }
+			.bg-b { stop-color: #161d33; }
+			.ink { fill: #f4f6fb; }
+			.muted { fill: #b8c2d8; }
+			.red-ink { fill: #ff8a96; }
+			.panel { fill: #131a2c; stroke: #2a3452; }
+			.card { fill: #1c243a; stroke: #36425f; }
+			.engine { fill: #2a1622; stroke: #7a2e3c; }
+			.wire { stroke: #8b97b1; }
+			.arrow { fill: #8b97b1; }
+			.ring { stroke: #5b9cff; }
+			.lit { fill: #5b9cff; fill-opacity: 0.22; stroke: #5b9cff; }
+			.edge { stroke: #ff6f7d; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			.motion { display: none; }
+			.static { display: inline; }
+		}
+	</style>
+
+	<defs>
+		<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+			<stop class="bg-a" offset="0"/>
+			<stop class="bg-b" offset="1"/>
+		</linearGradient>
+		<linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#d6334a"/>
+			<stop offset="1" stop-color="#a8172c"/>
+		</linearGradient>
+		<linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#2a6fe0"/>
+			<stop offset="1" stop-color="#1a52b8"/>
+		</linearGradient>
+		<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+			<path class="arrow" d="M0 1 L10 5 L0 9 z"/>
+		</marker>
+		<path id="p-f-gtk" d="M129 104 V 148"/>
+		<path id="p-f-cli" d="M355 104 V 148"/>
+		<path id="p-f-ipc" d="M581 104 V 148"/>
+		<path id="p-f-app" d="M819 104 V 148"/>
+		<path id="p-dep" d="M480 386 V 402"/>
+	</defs>
+
+	<rect data-bg="" width="960" height="496" rx="16" fill="url(#bg)"/>
+
+	<rect id="f-gtk" data-box="" class="card" x="24" y="24" width="210" height="80" rx="10"/>
+	<text data-for="f-gtk" class="mono ink" x="40" y="48" font-size="13" font-weight="700">mailslot-gtk</text>
+	<text data-for="f-gtk" class="ui muted" x="40" y="68" font-size="11">binary mailslot</text>
+	<text data-for="f-gtk" class="ui muted" x="40" y="86" font-size="11">GTK 4, libadwaita</text>
+	<rect id="f-cli" data-box="" class="card" x="250" y="24" width="210" height="80" rx="10"/>
+	<text data-for="f-cli" class="mono ink" x="266" y="48" font-size="13" font-weight="700">mailslot-cli</text>
+	<text data-for="f-cli" class="ui muted" x="266" y="68" font-size="11">binary mailslot-cli</text>
+	<text data-for="f-cli" class="ui muted" x="266" y="86" font-size="11">send, serve, watch</text>
+	<rect id="f-ipc" data-box="" class="card" x="476" y="24" width="210" height="80" rx="10"/>
+	<text data-for="f-ipc" class="mono ink" x="492" y="48" font-size="13" font-weight="700">mailslot-ipc</text>
+	<text data-for="f-ipc" class="ui muted" x="492" y="68" font-size="11">binary mailslotd</text>
+	<text data-for="f-ipc" class="ui muted" x="492" y="86" font-size="11">JSON-RPC, Unix socket</text>
+	<rect id="f-app" data-box="" class="card" x="702" y="24" width="234" height="80" rx="10" stroke-dasharray="5 4"/>
+	<text data-for="f-app" class="ui ink" x="718" y="48" font-size="13" font-weight="700">Your app</text>
+	<text data-for="f-app" class="ui muted" x="718" y="68" font-size="11">Tauri, Iced, a service</text>
+	<text data-for="f-app" class="ui muted" x="718" y="86" font-size="11">picks its features</text>
+
+	<path data-line="" class="edge" d="M24 132 H 936"/>
+	<text class="ui red-ink" x="150" y="124" font-size="11" font-weight="700">no GTK below this line</text>
+	<text class="ui muted" x="468" y="124" font-size="11" text-anchor="middle">checked by core-embed in CI</text>
+	<use data-line="" href="#p-f-gtk" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-f-cli" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-f-ipc" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-f-app" class="wire" marker-end="url(#arr)"/>
+
+	<rect id="core" data-box="" class="engine" x="24" y="150" width="912" height="236" rx="14"/>
+	<text data-for="core" class="mono red-ink" x="40" y="176" font-size="13" font-weight="700">mailslot-core</text>
+	<text data-for="core" class="ui muted" x="160" y="176" font-size="11">library: engine, protocol, server, client; no UI dependency</text>
+	<text data-for="core" class="ui muted" x="40" y="202" font-size="11" font-weight="700" letter-spacing="1">MODULES</text>
+	<rect id="m-engine" data-box="" class="card" x="40" y="212" width="134" height="28" rx="6"/>
+	<text data-for="m-engine" class="mono ink" x="50" y="230" font-size="11">engine</text>
+	<rect id="m-server" data-box="" class="card" x="182" y="212" width="134" height="28" rx="6"/>
+	<text data-for="m-server" class="mono ink" x="192" y="230" font-size="11">server</text>
+	<rect id="m-client" data-box="" class="card" x="324" y="212" width="134" height="28" rx="6"/>
+	<text data-for="m-client" class="mono ink" x="334" y="230" font-size="11">client</text>
+	<rect id="m-portmap" data-box="" class="card" x="466" y="212" width="134" height="28" rx="6"/>
+	<text data-for="m-portmap" class="mono ink" x="476" y="230" font-size="11">portmap</text>
+	<rect id="m-discovery" data-box="" class="card" x="40" y="248" width="134" height="28" rx="6"/>
+	<text data-for="m-discovery" class="mono ink" x="50" y="266" font-size="11">discovery</text>
+	<rect id="m-watch" data-box="" class="card" x="182" y="248" width="134" height="28" rx="6"/>
+	<text data-for="m-watch" class="mono ink" x="192" y="266" font-size="11">watch</text>
+	<rect id="m-outbox" data-box="" class="card" x="324" y="248" width="134" height="28" rx="6"/>
+	<text data-for="m-outbox" class="mono ink" x="334" y="266" font-size="11">outbox</text>
+	<rect id="m-config" data-box="" class="card" x="466" y="248" width="134" height="28" rx="6"/>
+	<text data-for="m-config" class="mono ink" x="476" y="266" font-size="11">config</text>
+	<rect id="m-events" data-box="" class="card" x="40" y="284" width="134" height="28" rx="6"/>
+	<text data-for="m-events" class="mono ink" x="50" y="302" font-size="11">events</text>
+	<rect id="m-proto" data-box="" class="card" x="182" y="284" width="134" height="28" rx="6"/>
+	<text data-for="m-proto" class="mono ink" x="192" y="302" font-size="11">proto</text>
+	<rect id="m-naming" data-box="" class="card" x="324" y="284" width="134" height="28" rx="6"/>
+	<text data-for="m-naming" class="mono ink" x="334" y="302" font-size="11">naming</text>
+	<rect id="m-token" data-box="" class="card" x="466" y="284" width="134" height="28" rx="6"/>
+	<text data-for="m-token" class="mono ink" x="476" y="302" font-size="11">token</text>
+	<rect id="m-history" data-box="" class="card" x="40" y="320" width="134" height="28" rx="6"/>
+	<text data-for="m-history" class="mono ink" x="50" y="338" font-size="11">history</text>
+	<rect id="m-netinfo" data-box="" class="card" x="182" y="320" width="134" height="28" rx="6"/>
+	<text data-for="m-netinfo" class="mono ink" x="192" y="338" font-size="11">netinfo</text>
+	<rect id="m-snippets" data-box="" class="card" x="324" y="320" width="134" height="28" rx="6"/>
+	<text data-for="m-snippets" class="mono ink" x="334" y="338" font-size="11">snippets</text>
+	<rect id="m-tls" data-box="" class="card" x="466" y="320" width="134" height="28" rx="6"/>
+	<text data-for="m-tls" class="mono ink" x="476" y="338" font-size="11">tls</text>
+	<text data-for="core" class="ui muted" x="640" y="202" font-size="11" font-weight="700" letter-spacing="1">FEATURES</text>
+	<text data-for="core" class="ui muted" x="640" y="346" font-size="11">default: all six</text>
+	<text data-for="core" class="ui muted" x="640" y="362" font-size="11">watch implies client</text>
+	<rect id="ft-server" data-box="" class="card" x="640" y="212" width="132" height="32" rx="6"/>
+	<g class="motion"><rect class="lit" x="640" y="212" width="132" height="32" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;1" values="0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="640" y="212" width="132" height="32" rx="6"/></g>
+	<text data-for="ft-server" class="mono ink" x="650" y="232" font-size="11">server</text>
+	<rect id="ft-client" data-box="" class="card" x="780" y="212" width="132" height="32" rx="6"/>
+	<g class="motion"><rect class="lit" x="780" y="212" width="132" height="32" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;0.6167;0.65;0.9333;0.9667;1" values="0;0;1;1;0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="780" y="212" width="132" height="32" rx="6"/></g>
+	<text data-for="ft-client" class="mono ink" x="790" y="232" font-size="11">client</text>
+	<rect id="ft-portmap" data-box="" class="card" x="640" y="252" width="132" height="32" rx="6"/>
+	<g class="motion"><rect class="lit" x="640" y="252" width="132" height="32" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;1" values="0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="640" y="252" width="132" height="32" rx="6"/></g>
+	<text data-for="ft-portmap" class="mono ink" x="650" y="272" font-size="11">portmap</text>
+	<rect id="ft-tls" data-box="" class="card" x="780" y="252" width="132" height="32" rx="6"/>
+	<g class="motion"><rect class="lit" x="780" y="252" width="132" height="32" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;1" values="0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="780" y="252" width="132" height="32" rx="6"/></g>
+	<text data-for="ft-tls" class="mono ink" x="790" y="272" font-size="11">tls</text>
+	<rect id="ft-watch" data-box="" class="card" x="640" y="292" width="132" height="32" rx="6"/>
+	<g class="motion"><rect class="lit" x="640" y="292" width="132" height="32" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;1" values="0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="640" y="292" width="132" height="32" rx="6"/></g>
+	<text data-for="ft-watch" class="mono ink" x="650" y="312" font-size="11">watch</text>
+	<rect id="ft-discovery" data-box="" class="card" x="780" y="292" width="132" height="32" rx="6"/>
+	<g class="motion"><rect class="lit" x="780" y="292" width="132" height="32" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;1" values="0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="780" y="292" width="132" height="32" rx="6"/></g>
+	<text data-for="ft-discovery" class="mono ink" x="790" y="312" font-size="11">discovery</text>
+	<g class="motion"><g opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2167;0.2417;0.4667;0.4917;1" values="0;0;1;1;0;0"/><text data-for="core" class="ui ink" x="40" y="372" font-size="11">mailslot, mailslot-cli and mailslotd build with all six</text></g></g>
+	<g class="motion"><g opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.6333;0.6583;0.9333;0.9583;1" values="0;0;1;1;0;0"/><text data-for="core" class="ui ink" x="40" y="372" font-size="11">Your app, client only: the Client API, no Engine, no axum</text></g></g>
+	<g class="static"><text data-for="core" class="ui ink" x="40" y="372" font-size="11">mailslot, mailslot-cli and mailslotd build with all six</text></g>
+
+	<use data-line="" href="#p-dep" class="wire" marker-end="url(#arr)"/>
+	<rect id="third" data-box="" class="panel" x="24" y="404" width="912" height="76" rx="14"/>
+	<text data-for="third" class="ui muted" x="40" y="426" font-size="11" font-weight="700" letter-spacing="1">THIRD-PARTY CRATES</text>
+	<rect id="d-tokio" data-box="" class="card" x="40" y="436" width="102" height="28" rx="6"/>
+	<g class="motion"><rect class="lit" x="40" y="436" width="102" height="28" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;0.6167;0.65;0.9333;0.9667;1" values="0;0;1;1;0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="40" y="436" width="102" height="28" rx="6"/></g>
+	<text data-for="d-tokio" class="mono ink" x="50" y="454" font-size="11">tokio</text>
+	<rect id="d-axum-hyper" data-box="" class="card" x="150" y="436" width="102" height="28" rx="6"/>
+	<g class="motion"><rect class="lit" x="150" y="436" width="102" height="28" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;1" values="0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="150" y="436" width="102" height="28" rx="6"/></g>
+	<text data-for="d-axum-hyper" class="mono ink" x="160" y="454" font-size="11">axum + hyper</text>
+	<rect id="d-reqwest" data-box="" class="card" x="260" y="436" width="102" height="28" rx="6"/>
+	<g class="motion"><rect class="lit" x="260" y="436" width="102" height="28" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;0.6167;0.65;0.9333;0.9667;1" values="0;0;1;1;0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="260" y="436" width="102" height="28" rx="6"/></g>
+	<text data-for="d-reqwest" class="mono ink" x="270" y="454" font-size="11">reqwest</text>
+	<rect id="d-igd-next" data-box="" class="card" x="370" y="436" width="102" height="28" rx="6"/>
+	<g class="motion"><rect class="lit" x="370" y="436" width="102" height="28" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;1" values="0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="370" y="436" width="102" height="28" rx="6"/></g>
+	<text data-for="d-igd-next" class="mono ink" x="380" y="454" font-size="11">igd-next</text>
+	<rect id="d-crab_nat" data-box="" class="card" x="480" y="436" width="102" height="28" rx="6"/>
+	<g class="motion"><rect class="lit" x="480" y="436" width="102" height="28" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;1" values="0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="480" y="436" width="102" height="28" rx="6"/></g>
+	<text data-for="d-crab_nat" class="mono ink" x="490" y="454" font-size="11">crab_nat</text>
+	<rect id="d-mdns-sd" data-box="" class="card" x="590" y="436" width="102" height="28" rx="6"/>
+	<g class="motion"><rect class="lit" x="590" y="436" width="102" height="28" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;1" values="0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="590" y="436" width="102" height="28" rx="6"/></g>
+	<text data-for="d-mdns-sd" class="mono ink" x="600" y="454" font-size="11">mdns-sd</text>
+	<rect id="d-rustls" data-box="" class="card" x="700" y="436" width="102" height="28" rx="6"/>
+	<g class="motion"><rect class="lit" x="700" y="436" width="102" height="28" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;1" values="0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="700" y="436" width="102" height="28" rx="6"/></g>
+	<text data-for="d-rustls" class="mono ink" x="710" y="454" font-size="11">rustls</text>
+	<rect id="d-notify" data-box="" class="card" x="810" y="436" width="102" height="28" rx="6"/>
+	<g class="motion"><rect class="lit" x="810" y="436" width="102" height="28" rx="6" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.2;0.2333;0.4667;0.5;1" values="0;0;1;1;0;0"/></rect></g>
+	<g class="static"><rect class="lit" x="810" y="436" width="102" height="28" rx="6"/></g>
+	<text data-for="d-notify" class="mono ink" x="820" y="454" font-size="11">notify</text>
+
+	<g class="motion">
+		<rect class="ring" x="24" y="24" width="210" height="80" rx="10" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.0167;0.0417;0.0833;0.1083;1" values="0;0;1;1;0;0"/></rect>
+		<rect class="ring" x="250" y="24" width="210" height="80" rx="10" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.075;0.1;0.1417;0.1667;1" values="0;0;1;1;0;0"/></rect>
+		<rect class="ring" x="476" y="24" width="210" height="80" rx="10" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.1333;0.1583;0.2;0.225;1" values="0;0;1;1;0;0"/></rect>
+		<rect class="ring" x="702" y="24" width="234" height="80" rx="10" opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.525;0.55;0.9333;0.9583;1" values="0;0;1;1;0;0"/></rect>
+		<g opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.0292;0.0333;0.1;0.1042;1" values="0;0;1;1;0;0"/><animateMotion dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.0333;0.1;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-f-gtk"/></animateMotion><circle r="4.5" fill="#2f7bea"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.0875;0.0917;0.1583;0.1625;1" values="0;0;1;1;0;0"/><animateMotion dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.0917;0.1583;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-f-cli"/></animateMotion><circle r="4.5" fill="#2f7bea"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.1458;0.15;0.2167;0.2208;1" values="0;0;1;1;0;0"/><animateMotion dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.15;0.2167;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-f-ipc"/></animateMotion><circle r="4.5" fill="#2f7bea"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.5458;0.55;0.6167;0.6208;1" values="0;0;1;1;0;0"/><animateMotion dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.55;0.6167;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-f-app"/></animateMotion><circle r="4.5" fill="#2f7bea"/></g>
+	</g>
+</svg>
