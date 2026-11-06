@@ -608,11 +608,6 @@ impl MailslotWindow {
 				))),
 			),
 			_ => {
-				if imp.banner_action.borrow().is_none()
-					|| sharing || st.status == Status::Stopped && !imp.banner.is_revealed()
-				{
-					// Leave start-failure banners alone until the next start.
-				}
 				if sharing {
 					imp.banner.set_revealed(false);
 					*imp.banner_action.borrow_mut() = None;
