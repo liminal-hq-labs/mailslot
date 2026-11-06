@@ -1,1 +1,55 @@
-<!doctype html><title>Mailslot</title><link rel=stylesheet href=drop.css><script src=drop.js defer></script>
+<!doctype html>
+<!-- Mailslot drop page. Plain HTML, CSS and JS: no framework, no CDN, no inline script or style. -->
+<!--
+ (c) Copyright 2026 Liminal HQ, Scott Morris
+ SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="referrer" content="no-referrer">
+<title>Drop files</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="drop.css">
+<script src="drop.js" defer></script>
+</head>
+<body>
+<main>
+	<header class="brand">
+		<img src="logo.svg" alt="" width="40" height="40">
+		<div>
+			<h1>Drop files</h1>
+			<p id="limits" class="muted">Files go straight to the person who shared this link.</p>
+		</div>
+	</header>
+
+	<div id="zone" class="zone" tabindex="0" role="group" aria-label="Drop files here">
+		<p class="zone-title">Drop files or folders here</p>
+		<p class="muted">or choose them from this device</p>
+		<div class="actions">
+			<button type="button" id="pick-files" class="primary">Choose files</button>
+			<button type="button" id="pick-folder">Choose a folder</button>
+		</div>
+		<input id="files" type="file" multiple hidden>
+		<input id="folder" type="file" webkitdirectory hidden>
+	</div>
+
+	<p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
+
+	<section aria-labelledby="sent-title" id="sent" hidden>
+		<div class="sent-head">
+			<h2 id="sent-title">This session</h2>
+			<button type="button" id="clear" class="quiet">Clear finished</button>
+		</div>
+		<ul id="list" class="list"></ul>
+	</section>
+
+	<footer class="muted">
+		<p>Only uploads from this browser tab are listed here. Nothing on the receiving computer is shown or served back. <span id="hash-note"></span></p>
+		<p><a href="https://github.com/liminal-hq/mailslot">About Mailslot</a></p>
+	</footer>
+</main>
+</body>
+</html>
