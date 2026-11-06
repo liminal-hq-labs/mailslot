@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Mailslot symbolic icon: a slot with an arrow dropping in.
+
+  (c) Copyright 2026 Liminal HQ, Scott Morris
+  SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+	<path fill="#2e3436" d="M7 1h2v5.2l1.8-1.8 1.4 1.4L8 10 3.8 5.8l1.4-1.4L7 6.2z"/>
+	<path fill="#2e3436" fill-rule="evenodd" d="M4.5 9h7A2.5 2.5 0 0 1 14 11.5 2.5 2.5 0 0 1 11.5 14h-7A2.5 2.5 0 0 1 2 11.5 2.5 2.5 0 0 1 4.5 9zm0 1.5a1 1 0 0 0 0 2h7a1 1 0 0 0 0-2z"/>
+	<rect fill="#2e3436" x="5" y="11" width="6" height="1" rx="0.5"/>
+</svg>
