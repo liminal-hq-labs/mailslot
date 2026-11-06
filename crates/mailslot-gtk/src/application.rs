@@ -59,6 +59,10 @@ fn shortcuts_dialog() -> adw::ShortcutsDialog {
 	for (title, accel) in [
 		(gettext("Start or stop sharing"), "<Control><Shift>s"),
 		(gettext("Copy link"), "<Control><Shift>c"),
+		(
+			gettext("Pause or resume accepting files"),
+			"<Control><Shift>p",
+		),
 		(gettext("Make a new link"), "<Control><Shift>n"),
 		(gettext("Preferences"), "<Control>comma"),
 		(gettext("Keyboard shortcuts"), "<Control>question"),
@@ -109,6 +113,7 @@ pub fn run() -> glib::ExitCode {
 			("win.toggle-sharing", &["<Control><Shift>s"]),
 			("win.copy-link", &["<Control><Shift>c"]),
 			("win.new-link", &["<Control><Shift>n"]),
+			("win.toggle-pause", &["<Control><Shift>p"]),
 		] {
 			app.set_accels_for_action(action, accels);
 		}

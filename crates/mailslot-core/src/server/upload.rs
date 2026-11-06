@@ -631,6 +631,7 @@ pub(super) async fn put(
 					})
 			})
 		});
+	let sender = sender.or_else(|| settings.default_sender.clone());
 	let dir = target_dir(shared, &settings, sender.as_deref());
 	if dir != shared.dest && tokio::fs::create_dir_all(&dir).await.is_err() {
 		return attempt

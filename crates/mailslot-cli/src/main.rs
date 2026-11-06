@@ -88,6 +88,15 @@ pub struct ServeArgs {
 	/// Stop after this many files (1 is one-shot mode).
 	#[arg(long)]
 	pub stop_after: Option<u32>,
+	/// Name this link; senders using it are filed under the name with `--subfolders sender`.
+	#[arg(long)]
+	pub label: Option<String>,
+	/// How to group received files: `none`, `date` or `sender`.
+	#[arg(long, value_parser = ["none", "date", "sender"])]
+	pub subfolders: Option<String>,
+	/// Announce this share on the local network with mDNS (never includes the secret).
+	#[arg(long)]
+	pub mdns: bool,
 	/// Serve HTTPS with a self-signed certificate and print its key pin.
 	#[arg(long)]
 	pub https: bool,
@@ -129,12 +138,22 @@ pub struct WatchArgs {
 	pub dir: PathBuf,
 	/// Link to push to.
 	pub link: String,
-	/// Seconds between scans.
-	#[arg(long, default_value_t = 2)]
+	/// Seconds to wait before retrying a file that failed to send.
+	#[arg(long, default_value_t = 5)]
 	pub interval: u64,
-	/// Do not send files that already exist; push only new and changed ones.
+	/// Do not send files that already exist; push only new and changed ones. Applies when
+	/// there is no saved queue yet.
 	#[arg(long)]
 	pub skip_existing: bool,
+	/// Quiet time in milliseconds before a changed file is considered finished.
+	#[arg(long, default_value_t = 800)]
+	pub debounce_ms: u64,
+	/// Where to keep the persisted send queue (default: the data folder).
+	#[arg(long)]
+	pub state: Option<PathBuf>,
+	/// Keep settings and data under this folder instead of the XDG locations.
+	#[arg(long)]
+	pub home: Option<PathBuf>,
 	#[command(flatten)]
 	pub client: ClientArgs,
 }
@@ -146,6 +165,13 @@ pub struct PairArgs {
 	/// Keep settings under this folder instead of the XDG locations.
 	#[arg(long)]
 	pub home: Option<PathBuf>,
+	/// Look for shares announcing themselves on the local network instead. Announcements
+	/// never include the secret, so you still need the link from its owner.
+	#[arg(long)]
+	pub discover: bool,
+	/// Seconds to listen when discovering.
+	#[arg(long, default_value_t = 3)]
+	pub timeout: u64,
 	/// Print JSON instead of text and a QR code.
 	#[arg(long)]
 	pub json: bool,

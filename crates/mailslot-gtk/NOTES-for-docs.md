@@ -47,3 +47,11 @@ Notes for `docs/gtk-primer.md`. Each item is something that cost time.
 - A `GtkStack` crossfade is still running 200 ms after the page switch; let the main loop iterate before taking a screenshot.
 - Screenshot a widget with `gtk::WidgetPaintable` → `Snapshot::to_node()` → `native().renderer().render_texture()` → `Texture::save_to_png()`.
 - Without the app icon installed in the icon theme, `AdwStatusPage` shows the "image missing" placeholder; add the icon directory to `XDG_DATA_DIRS` for screenshots.
+
+## Later additions
+
+- Decode QR codes off the main thread: download the texture to plain luminance bytes on the main thread (`gdk::TextureDownloader` with `MemoryFormat::R8g8b8a8`), then hand the `Vec<u8>` to `gio::spawn_blocking`. GObjects never cross threads; plain bytes do.
+- `rqrr::PreparedImage::prepare_from_greyscale` avoids pulling in the `image` crate.
+- `adw::ButtonRow` and extra `AdwPreferencesGroup` children can be added and removed at runtime (`group.add`, `group.remove`), which suits lists of discovered items.
+- mDNS announcements and browsing run on their own thread inside `mdns-sd`; its receivers are `flume` channels whose `recv_async` works from any executor.
+- Extract strings with `xgettext -L Rust --from-code=UTF-8 --keyword=gettext --keyword=ngettext:1,2 -o po/mailslot-rs.pot $(find crates/mailslot-gtk/src -name '*.rs')` and `xgettext -L Glade --from-code=UTF-8 -o po/mailslot-ui.pot crates/mailslot-gtk/resources/ui/*.ui`, then merge with `msgcat`. Needs GNU gettext 0.24 or newer for `-L Rust`.

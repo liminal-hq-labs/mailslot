@@ -7,7 +7,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// Identifier of one received upload, unique within an engine.
 pub type UploadId = u64;
@@ -15,7 +15,7 @@ pub type UploadId = u64;
 pub type SendId = u64;
 
 /// Lifecycle of the share.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Status {
 	/// Not listening.
 	Stopped,
@@ -28,7 +28,7 @@ pub enum Status {
 }
 
 /// Why sharing ended.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StopReason {
 	/// The user stopped it.
 	Requested,
@@ -43,7 +43,7 @@ pub enum StopReason {
 }
 
 /// Progress of one received file.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UploadState {
 	/// Bytes are arriving.
 	Receiving,
@@ -54,7 +54,7 @@ pub enum UploadState {
 }
 
 /// A received (or receiving) file as the UI shows it.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UploadSnapshot {
 	/// Identifier.
 	pub id: UploadId,
@@ -91,7 +91,7 @@ impl UploadSnapshot {
 }
 
 /// Events about received files, produced by the server.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum UploadEvent {
 	/// A body started arriving.
 	Started {
@@ -147,7 +147,7 @@ pub enum UploadEvent {
 }
 
 /// Classification of a port-mapping problem.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DiagnosticKind {
 	/// No gateway answered.
 	NoGateway,
@@ -166,7 +166,7 @@ pub enum DiagnosticKind {
 }
 
 /// A human-readable diagnosis.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Diagnostic {
 	/// Class of problem.
 	pub kind: DiagnosticKind,
@@ -175,7 +175,7 @@ pub struct Diagnostic {
 }
 
 /// State of internet exposure through the router.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum InternetState {
 	/// Not requested.
 	#[default]
@@ -196,7 +196,7 @@ pub enum InternetState {
 }
 
 /// Events about the router mapping.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum InternetEvent {
 	/// The state changed.
 	State(InternetState),
@@ -208,7 +208,7 @@ pub enum InternetEvent {
 }
 
 /// Events about outgoing transfers.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum SendEvent {
 	/// A transfer began.
 	Started {
@@ -263,7 +263,7 @@ pub enum SendEvent {
 }
 
 /// An outgoing transfer as the UI shows it.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SendSnapshot {
 	/// Identifier.
 	pub id: SendId,
@@ -284,7 +284,7 @@ pub struct SendSnapshot {
 }
 
 /// One URL a sender could use, for one local address.
-#[derive(Clone, PartialEq, Eq, Serialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShareUrl {
 	/// Label such as `Wi-Fi (wlan0)` or `This computer`.
 	pub label: String,
@@ -306,7 +306,7 @@ impl std::fmt::Debug for ShareUrl {
 }
 
 /// A snapshot of everything a frontend needs to draw itself.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EngineState {
 	/// Lifecycle.
 	pub status: Status,
@@ -330,6 +330,10 @@ pub struct EngineState {
 	pub received_bytes: u64,
 	/// Settings changed that only apply after a restart of sharing.
 	pub restart_required: bool,
+	/// Uploads are being refused with `503` until resumed.
+	pub paused: bool,
+	/// Advertising on the local network with mDNS.
+	pub advertising: bool,
 }
 
 impl Default for EngineState {
@@ -346,12 +350,14 @@ impl Default for EngineState {
 			received_files: 0,
 			received_bytes: 0,
 			restart_required: false,
+			paused: false,
+			advertising: false,
 		}
 	}
 }
 
 /// Anything the engine reports.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Event {
 	/// Lifecycle or URLs changed; the snapshot is current.
 	StateChanged(Box<EngineState>),

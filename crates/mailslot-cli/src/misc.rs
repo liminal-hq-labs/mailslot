@@ -46,8 +46,41 @@ fn qr_text(data: &str) -> Option<String> {
 	Some(out)
 }
 
+async fn discover(a: &PairArgs) -> Result<ExitCode> {
+	let peers =
+		mailslot_core::discovery::browse(std::time::Duration::from_secs(a.timeout.max(1))).await?;
+	if a.json {
+		println!("{}", serde_json::to_string(&peers)?);
+	} else if peers.is_empty() {
+		println!("No Mailslot shares found on this network.");
+		eprintln!(
+			"A share announces itself only while it is sharing and only if \"Announce on the local network\" is on."
+		);
+	} else {
+		for p in &peers {
+			let addrs: Vec<String> = p.addresses.iter().map(ToString::to_string).collect();
+			println!(
+				"{}  {}:{}{}{}",
+				p.instance,
+				addrs.join(","),
+				p.port,
+				if p.tls { "  https" } else { "" },
+				p.label
+					.as_ref()
+					.map(|l| format!("  label={l}"))
+					.unwrap_or_default()
+			);
+		}
+		eprintln!("Announcements never include the secret. Ask the owner for the full link.");
+	}
+	Ok(ExitCode::SUCCESS)
+}
+
 pub async fn pair(a: PairArgs) -> Result<ExitCode> {
 	mailslot_core::tls::ensure_default_provider();
+	if a.discover {
+		return discover(&a).await;
+	}
 	if let Some(text) = &a.link {
 		let link = MailslotLink::parse(text).context("the link is not valid")?;
 		let client = Client::new(
@@ -93,7 +126,8 @@ pub async fn pair(a: PairArgs) -> Result<ExitCode> {
 		.next()
 		.map(|a| a.ip.to_string())
 		.unwrap_or_else(|| "127.0.0.1".into());
-	let mut link = MailslotLink::new(host, config.sharing.port, token);
+	let mut link = MailslotLink::new(host, config.sharing.port, token)
+		.with_label(config.sharing.link_label.trim());
 	if config.security.https {
 		let pin = mailslot_core::tls::load_or_generate(&paths.tls_dir(), &[link.host.clone()])
 			.await?

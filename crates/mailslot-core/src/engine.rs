@@ -72,6 +72,8 @@ struct Running {
 	server: ServerHandle,
 	cancel: CancellationToken,
 	portmap: Option<(CancellationToken, tokio::task::JoinHandle<()>)>,
+	#[cfg(feature = "discovery")]
+	advertiser: Option<crate::discovery::Advertiser>,
 }
 
 struct Inner {
@@ -323,7 +325,8 @@ async fn build_urls(
 		.into_iter()
 		.map(|(label, ip)| {
 			let host = ip.to_string();
-			let mut link = MailslotLink::new(host.clone(), addr.port(), token.clone());
+			let mut link = MailslotLink::new(host.clone(), addr.port(), token.clone())
+				.with_label(cfg.sharing.link_label.trim());
 			if cfg.security.https {
 				link = link.with_tls(tls_pin.clone());
 			}
@@ -455,6 +458,41 @@ impl Engine {
 		.await
 	}
 
+	/// Refuses new uploads with `503` (and reports `accepting: false` in `health`) until
+	/// [`Engine::resume`]. Uploads already in progress finish.
+	pub async fn pause(&self) -> Result<()> {
+		self.set_paused(true).await
+	}
+
+	/// Accepts uploads again after [`Engine::pause`].
+	pub async fn resume(&self) -> Result<()> {
+		self.set_paused(false).await
+	}
+
+	async fn set_paused(&self, paused: bool) -> Result<()> {
+		let inner = self.inner.clone();
+		self.run(async move {
+			let running = inner.running.lock().await;
+			let Some(r) = running.as_ref() else {
+				return Err(Error::State("not sharing".into()));
+			};
+			r.server.set_accepting(!paused);
+			drop(running);
+			inner.mutate(|s| s.paused = paused);
+			inner.emit_state();
+			Ok(())
+		})
+		.await
+	}
+
+	/// Browses the local network for other Mailslot shares (mDNS) for `timeout`.
+	/// Announcements never contain the secret, so a found share still needs its link.
+	#[cfg(feature = "discovery")]
+	pub async fn discover_peers(&self, timeout: Duration) -> Result<Vec<crate::discovery::Peer>> {
+		self.run(async move { crate::discovery::browse(timeout).await })
+			.await
+	}
+
 	/// Replaces the token. The old link stops working immediately.
 	pub async fn rotate_token(&self) -> Result<Token> {
 		let inner = self.inner.clone();
@@ -501,8 +539,8 @@ impl Engine {
 			if let Ok(mut c) = inner.config.lock() {
 				*c = new.clone();
 			}
-			let running = inner.running.lock().await;
-			if let Some(r) = running.as_ref() {
+			let mut running = inner.running.lock().await;
+			if let Some(r) = running.as_mut() {
 				let expires = inner.state().expires_at;
 				r.server
 					.update_settings(ServerSettings::from_config(&new, expires));
@@ -512,6 +550,21 @@ impl Engine {
 					|| old.storage.dest_dir != new.storage.dest_dir;
 				if restart {
 					inner.mutate(|s| s.restart_required = true);
+				}
+				let (addr, pin) = {
+					let s = inner.state();
+					(s.addr, s.tls_pin)
+				};
+				if let Some(addr) = addr {
+					let urls = build_urls(&inner, addr, &inner.token(), &pin, &new).await;
+					inner.mutate(|s| s.urls = urls);
+				}
+				#[cfg(feature = "discovery")]
+				if old.network.mdns != new.network.mdns
+					|| old.sharing.link_label != new.sharing.link_label
+				{
+					r.advertiser = None;
+					r.advertiser = start_advertising(&inner, &new, r.server.local_addr().port());
 				}
 			}
 			drop(running);
@@ -638,6 +691,37 @@ impl Engine {
 			.unwrap_or_default();
 		for id in ids {
 			self.cancel_send(id);
+		}
+	}
+}
+
+/// Starts the mDNS announcement when the preference is on. The secret is never included.
+#[cfg(feature = "discovery")]
+fn start_advertising(
+	inner: &Inner,
+	cfg: &Config,
+	port: u16,
+) -> Option<crate::discovery::Advertiser> {
+	if !cfg.network.mdns {
+		inner.mutate(|s| s.advertising = false);
+		return None;
+	}
+	let label = cfg.sharing.link_label.trim();
+	let result = crate::discovery::Advertiser::start(
+		&format!("Mailslot on {}", crate::discovery::hostname()),
+		port,
+		cfg.security.https,
+		(!label.is_empty()).then_some(label),
+	);
+	match result {
+		Ok(a) => {
+			inner.mutate(|s| s.advertising = true);
+			Some(a)
+		}
+		Err(e) => {
+			tracing::warn!("mDNS advertising failed: {e}");
+			inner.mutate(|s| s.advertising = false);
+			None
 		}
 	}
 }
@@ -804,10 +888,14 @@ async fn start_server(inner: &Arc<Inner>, cfg: &Config) -> Result<Running> {
 		s.tls_pin = pin;
 	});
 	inner.emit_state();
+	#[cfg(feature = "discovery")]
+	let advertiser = start_advertising(inner, cfg, addr.port());
 	Ok(Running {
 		server,
 		cancel,
 		portmap: None,
+		#[cfg(feature = "discovery")]
+		advertiser,
 	})
 }
 
@@ -822,7 +910,11 @@ async fn stop_inner(inner: Arc<Inner>, reason: StopReason) {
 		let _ = tokio::time::timeout(Duration::from_secs(8), task).await;
 	}
 	r.server.shutdown().await;
+	#[cfg(feature = "discovery")]
+	drop(r.advertiser.take());
 	inner.mutate(|s| {
+		s.paused = false;
+		s.advertising = false;
 		s.status = Status::Stopped;
 		s.addr = None;
 		s.urls.clear();

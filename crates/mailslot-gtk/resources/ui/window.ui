@@ -95,6 +95,14 @@
 								<style><class name="suggested-action"/></style>
 							</object>
 						</child>
+						<child type="start">
+							<object class="GtkButton" id="pause_button">
+								<property name="icon-name">media-playback-pause-symbolic</property>
+								<property name="visible">False</property>
+								<property name="action-name">win.toggle-pause</property>
+								<property name="tooltip-text" translatable="yes">Pause accepting files (Ctrl+Shift+P)</property>
+							</object>
+						</child>
 						<child type="end">
 							<object class="GtkMenuButton">
 								<property name="icon-name">open-menu-symbolic</property>
@@ -354,6 +362,30 @@
 																			<object class="AdwActionRow" id="send_status_row">
 																				<property name="title" translatable="yes">Destination</property>
 																				<property name="subtitle" translatable="yes">Paste a link to begin</property>
+																			</object>
+																		</child>
+																	</object>
+																</child>
+																<child>
+																	<object class="AdwPreferencesGroup" id="nearby_group">
+																		<property name="title" translatable="yes">Find a link</property>
+																		<property name="description" translatable="yes">Scan a QR code from a screenshot or the clipboard, or look for shares on this network. Nearby shares never reveal their secret; you still need the full link.</property>
+																		<child>
+																			<object class="AdwButtonRow" id="scan_file_row">
+																				<property name="title" translatable="yes">Read a QR code from an image…</property>
+																				<property name="start-icon-name">camera-photo-symbolic</property>
+																			</object>
+																		</child>
+																		<child>
+																			<object class="AdwButtonRow" id="scan_clipboard_row">
+																				<property name="title" translatable="yes">Read a QR code from the clipboard</property>
+																				<property name="start-icon-name">edit-paste-symbolic</property>
+																			</object>
+																		</child>
+																		<child>
+																			<object class="AdwButtonRow" id="nearby_row">
+																				<property name="title" translatable="yes">Look for nearby shares</property>
+																				<property name="start-icon-name">network-wireless-symbolic</property>
 																			</object>
 																		</child>
 																	</object>
