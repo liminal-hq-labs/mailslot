@@ -195,7 +195,7 @@ cli-tarball: ## Build the static musl mailslot-cli tarball into dist/
 
 .PHONY: packages
 packages: deb rpm appimage cli-tarball ## Every package except the Flatpak
-	cd dist && sha256sum * > SHA256SUMS
+	cd dist && find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%P\n' | sort | xargs sha256sum > SHA256SUMS
 
 .PHONY: clean-volumes
 clean-volumes: ## Remove the cargo and target volumes
