@@ -1,0 +1,48 @@
+# Weekly dependency updates for Cargo, GitHub Actions and the Docker base image.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+version: 2
+updates:
+  - package-ecosystem: 'cargo'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 5
+    labels:
+      - 'build'
+    groups:
+      gtk-rs:
+        patterns:
+          - 'gtk4*'
+          - 'libadwaita*'
+          - 'glib*'
+          - 'gio*'
+          - 'gdk*'
+          - 'gsk*'
+          - 'graphene*'
+          - 'pango*'
+          - 'cairo*'
+      tokio:
+        patterns:
+          - 'tokio*'
+          - 'hyper*'
+          - 'axum*'
+          - 'tower*'
+
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 5
+    labels:
+      - 'ci'
+
+  - package-ecosystem: 'docker'
+    directory: '/docker'
+    schedule:
+      interval: 'weekly'
+    open-pull-requests-limit: 3
+    labels:
+      - 'build'

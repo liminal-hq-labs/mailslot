@@ -1,0 +1,10 @@
+# Issue template chooser: security reports go through a private channel.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability
+    url: https://github.com/liminal-hq/mailslot/security/advisories/new
+    about: Please report security problems privately, not in a public issue.

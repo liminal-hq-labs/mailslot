@@ -1,0 +1,105 @@
+# Posts the results of a finished CI run to its pull request as one sticky comment.
+#
+# Split out from ci.yml because the pull_request event's own GITHUB_TOKEN is read-only for
+# Dependabot and fork PRs. A `workflow_run` trigger always runs with this workflow file's own
+# permissions, from the default branch, whoever opened the pull request. The comment holds the
+# pass, fail and skip counts per suite, the failing test names with an excerpt of each failure,
+# and the status of every check on the commit. It is found by a hidden marker and updated in place.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+name: Publish Test Results
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types:
+      - completed
+
+permissions: {}
+
+jobs:
+  publish-test-results:
+    name: Publish test results
+    runs-on: ubuntu-24.04
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'skipped'
+    permissions:
+      pull-requests: write
+      checks: read
+      actions: read
+      contents: read
+    steps:
+      # The comment script comes from the default branch, never from the pull request under test.
+      - name: Checkout the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Download and extract artefacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACTS_URL: ${{ github.event.workflow_run.artifacts_url }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          cd artifacts
+          gh api --paginate "${ARTIFACTS_URL}" -q '.artifacts[] | [.name, .archive_download_url] | @tsv' |
+            while IFS=$'\t' read -r name url; do
+              gh api "${url}" > "${name}.zip"
+              unzip -q -d "${name}" "${name}.zip"
+            done
+
+      - name: Find the pull request
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          number="$(jq -r '.number // empty' artifacts/event-file/event.json 2>/dev/null || true)"
+          if [ -z "$number" ]; then
+            number="$(gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" -q '.[0].number // empty')"
+          fi
+          echo "number=${number}" >> "${GITHUB_OUTPUT}"
+
+      - name: Collect check runs
+        if: steps.pr.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/${REPO}/commits/${HEAD_SHA}/check-runs" -q '.check_runs[] | {name, status, conclusion}' | jq -s '.' > artifacts/checks.json
+
+      - name: Write the comment
+        if: steps.pr.outputs.number != ''
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          set -euo pipefail
+          mapfile -t files < <(find artifacts -path '*-test-results/*.xml' | sort)
+          python3 scripts/junit-comment.py --sha "$HEAD_SHA" --checks artifacts/checks.json --run-url "$RUN_URL" "${files[@]}" > comment.md
+
+      - name: Post or update the sticky comment
+        if: steps.pr.outputs.number != ''
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('comment.md', 'utf8');
+            const marker = '<!-- mailslot-test-results -->';
+            const issue_number = Number(process.env.PR_NUMBER);
+            const { owner, repo } = context.repo;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find((c) => c.body && c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }

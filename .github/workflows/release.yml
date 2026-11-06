@@ -1,0 +1,247 @@
+# Builds every package on a version tag and attaches them, with SHA256SUMS, to one GitHub release.
+#
+# Pushing a `vX.Y.Z` tag builds the deb and rpm packages, the AppImage (with zsync update
+# information), the static CLI tarball and the Flatpak bundle. It writes SHA256SUMS over all of
+# them and attaches everything to the release for the tag. The release is created as a draft so it
+# is never public half-filled, then published once every file is on it. Started by hand it builds
+# and uploads workflow artefacts and publishes nothing, unless `release_tag` names an existing tag.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Optional existing tag (vX.Y.Z) to release; empty builds this ref and publishes nothing
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && (inputs.release_tag || github.sha) || github.ref_name }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prepare:
+    name: Check the version and tag
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+
+      - name: Read the tag and the workspace version
+        id: tag
+        env:
+          INPUT_TAG: ${{ inputs.release_tag }}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          tag="$INPUT_TAG"
+          if [ -z "$tag" ] && [ "$REF_TYPE" = tag ]; then tag="$REF_NAME"; fi
+          version="$(sed -n 's/^version *= *"\(.*\)"/\1/p' Cargo.toml | head -n1)"
+          if [ -n "$tag" ] && [ "$tag" != "v${version}" ]; then
+            echo "Tag ${tag} does not match the workspace version ${version}" >&2
+            exit 1
+          fi
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+  deb:
+    name: deb
+    needs: prepare
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: docker
+          target: pkg-deb
+          load: true
+          tags: mailslot-pkg-deb:local
+      - name: Build and check the packages
+        run: |
+          mkdir -p dist
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e CARGO_HOME=/tmp/cargo \
+            -e RUSTUP_TOOLCHAIN=1.98.0 -e CARGO_TARGET_DIR=/tmp/target \
+            -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
+            mailslot-pkg-deb:local bash scripts/package-deb.sh
+          bash scripts/test-package.sh deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-deb
+          path: dist/*.deb
+          if-no-files-found: error
+
+  rpm:
+    name: rpm
+    needs: prepare
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: docker
+          target: pkg-rpm
+          load: true
+          tags: mailslot-pkg-rpm:local
+      - name: Build and check the packages
+        run: |
+          mkdir -p dist
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e CARGO_HOME=/tmp/cargo \
+            -e RUSTUP_TOOLCHAIN=1.98.0 -e CARGO_TARGET_DIR=/tmp/target \
+            -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
+            mailslot-pkg-rpm:local bash scripts/package-rpm.sh
+          bash scripts/test-package.sh rpm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-rpm
+          path: dist/*.rpm
+          if-no-files-found: error
+
+  appimage:
+    name: AppImage
+    needs: prepare
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: docker
+          target: pkg-appimage
+          load: true
+          tags: mailslot-pkg-appimage:local
+      - name: Build and check the AppImage
+        run: |
+          mkdir -p dist
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e CARGO_HOME=/tmp/cargo \
+            -e RUSTUP_TOOLCHAIN=1.98.0 -e CARGO_TARGET_DIR=/tmp/target \
+            -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
+            mailslot-pkg-appimage:local bash scripts/package-appimage.sh
+          bash scripts/test-package.sh appimage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-appimage
+          path: dist/*.AppImage*
+          if-no-files-found: error
+
+  cli-tarball:
+    name: CLI tarball
+    needs: prepare
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: docker
+          target: pkg-musl
+          load: true
+          tags: mailslot-pkg-musl:local
+      - name: Build and check the tarball
+        run: |
+          mkdir -p dist
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e CARGO_HOME=/tmp/cargo \
+            -e RUSTUP_TOOLCHAIN=1.98.0 -e CARGO_TARGET_DIR=/tmp/target \
+            -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
+            mailslot-pkg-musl:local bash scripts/package-cli-tarball.sh
+          bash scripts/test-package.sh cli-tarball
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-cli-tarball
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  flatpak:
+    name: Flatpak
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
+      - name: Build the Flatpak bundle
+        run: bash scripts/package-flatpak.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-flatpak
+          path: dist/*.flatpak
+          if-no-files-found: error
+
+  publish:
+    name: Attach to the release
+    needs: [prepare, deb, rpm, appimage, cli-tarball, flatpak]
+    if: needs.prepare.outputs.tag != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Download the packages
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Write SHA256SUMS
+        run: |
+          cd dist
+          sha256sum -- * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create the release, attach everything and publish it
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.prepare.outputs.tag }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+          notes=()
+          if [ -f "docs/releases/${VERSION}.md" ]; then notes=(--notes-file "docs/releases/${VERSION}.md"); fi
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --draft --verify-tag --title "Mailslot ${VERSION}" --generate-notes "${notes[@]}"
+          fi
+          gh release upload "$TAG" dist/* --clobber
+          gh release edit "$TAG" --draft=false

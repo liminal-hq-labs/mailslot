@@ -1,0 +1,31 @@
+# Generated release notes: categories by pull request label.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+      - internal
+  categories:
+    - title: Enhancements
+      labels:
+        - enhancement
+    - title: Fixes
+      labels:
+        - bug
+    - title: Documentation
+      labels:
+        - documentation
+    - title: Testing
+      labels:
+        - testing
+    - title: CI and Build
+      labels:
+        - ci
+        - build
+        - chore
+    - title: Other Changes
+      labels:
+        - '*'
