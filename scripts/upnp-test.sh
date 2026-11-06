@@ -81,9 +81,15 @@ client=(docker run --rm --user "$(id -u):$(id -g)" --network "$lan" --ip "$clien
 ' || fail "the gateway did not map and unmap a port"
 echo "upnp-test: ok: miniupnpd maps and unmaps a TCP port"
 
-# 2. Mailslot's own port mapping, when the core tests exist.
+# 2. Mailslot's own port mapping, when the core tests exist. The test network has no route to the
+# internet, so the tests are built first on the default network (which can fetch crates) and then
+# run offline on the isolated one.
 if cargo metadata --no-deps --format-version 1 2>/dev/null | grep -q '"name":"mailslot-core"'; then
-	"${client[@]}" cargo nextest run -p mailslot-core --all-features --run-ignored only \
+	docker run --rm --user "$(id -u):$(id -g)" -v "$PWD:/workspace" -w /workspace \
+		-v mailslot-cargo-registry:/home/dev/.cargo/registry -v mailslot-target:/target \
+		-e CARGO_TARGET_DIR=/target "$dev_image" \
+		cargo nextest run -p mailslot-core --all-features --no-run || fail "could not build the core tests"
+	"${client[@]}" env CARGO_NET_OFFLINE=true cargo nextest run -p mailslot-core --all-features --run-ignored only \
 		-E 'test(/miniupnpd_/)' --no-tests=warn || fail "mailslot-core miniupnpd tests failed"
 	echo "upnp-test: ok: mailslot-core tests against miniupnpd"
 else

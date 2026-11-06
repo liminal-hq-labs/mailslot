@@ -64,15 +64,17 @@ ARG USER_GID=1000
 RUN groupadd -g "${USER_GID}" dev \
     && useradd -l -m -u "${USER_UID}" -g "${USER_GID}" dev \
     && chown -R dev:dev /usr/local/cargo /usr/local/rustup \
-    && install -d -o dev -g dev /target /home/dev/.cargo/registry
+    && install -d -o dev -g dev /target /home/dev/.cargo /home/dev/.cargo/registry
 
 USER dev
-ENV CARGO_TARGET_DIR=/target
+# Registry downloads go to the user's home so a named volume can cache them across runs.
+ENV CARGO_HOME=/home/dev/.cargo \
+    CARGO_TARGET_DIR=/target
 WORKDIR /workspace
 
 # UPnP test gateway: miniupnpd on a Docker network, standing in for a router. It needs
-# NET_ADMIN to manage its own iptables chains, and the test network is an internal bridge, so
-# nothing is reachable from outside the host. scripts/upnp-test.sh drives it.
+# NET_ADMIN to manage its own firewall tables, and the test networks have masquerading off, so
+# nothing is translated onto the host uplink. scripts/upnp-test.sh drives it.
 FROM registry.fedoraproject.org/fedora:${FEDORA_VERSION}@${FEDORA_DIGEST} AS upnp-test
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
