@@ -15,3 +15,7 @@ ignored:
   - DL4006
   # `cd` in one RUN chain is deliberate for download-and-extract steps.
   - DL3003
+  # Package versions come from pinned base-image digests, so apt pins would only add churn.
+  - DL3008
+  # Numeric ids come from build arguments; the user name is for readability.
+  - DL3066
