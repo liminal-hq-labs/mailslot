@@ -310,25 +310,34 @@ Discovery is opt-in (`network.mdns`, off by default) and local to the link: Mail
 
 `mailslot-ipc` lets a user interface in any language drive the same engine, without Rust bindings. It runs in `mailslotd`, a headless daemon, or in-process in an application that embeds it.
 
-- **Transport.** A Unix domain socket in `$XDG_RUNTIME_DIR` (`ca.liminalhq.mailslot/mailslotd.sock`), created with mode `0600` in a directory with mode `0700`. Only the same user can connect. The socket is never TCP, and it does not need the token.
+- **Transport.** A Unix domain socket at `$XDG_RUNTIME_DIR/ca.liminalhq.mailslot/mailslotd.sock`, created with mode `0600` in a directory with mode `0700`. Only the same user can connect. The socket is never TCP, and it does not need the token.
 - **Protocol.** JSON-RPC 2.0, one JSON object per line (newline-delimited), UTF-8.
 - **Methods.** They mirror the `Engine` commands:
 
 | Method | Params | Result |
 |---|---|---|
-| `state` | none | The current state snapshot |
-| `start`, `stop`, `pause`, `resume` | none | The new state |
-| `rotate_token` | none | The new link |
-| `config.get` | none | The configuration |
-| `config.set` | A partial configuration | The configuration after the change |
-| `send` | `{ "files": [path…], "link": "mailslot://…" }` | The queue entries created |
-| `queue.list` | none | The send queue |
-| `queue.cancel`, `queue.retry` | `{ "id": … }` | The entry |
-| `subscribe` | none | `true`. The server then sends `event` notifications for every engine event |
-| `unsubscribe` | none | `true` |
+| `ping` | none | `"pong"` |
+| `version` | none | `{"daemon", "protocol"}` |
+| `state` | none | The engine state snapshot |
+| `start` | none | The new state |
+| `stop`, `pause`, `resume` | none | `null` |
+| `rotate_token` | none | The new state, with the new links |
+| `settings.get` | none | The full settings |
+| `settings.update` | The full settings | `null` |
+| `settings.reset` | `{"section"?}` (`sharing`, `storage`, `limits`, `security`, `network`, `notifications`) | The settings after the reset |
+| `internet.set` | `{"enabled": bool}` | `null` |
+| `send` | `{"link", "paths", "options"?}` | `{"ids": […]}` |
+| `send.cancel` | `{"id"}` | `null` |
+| `check_link` | `{"link"}` | The receiver's health |
+| `discover` | `{"timeout_secs"?}` | Nearby receivers found with mDNS |
+| `history.get`, `history.clear` | none | The history entries, or `null` |
+| `subscribe`, `unsubscribe` | none | `true` |
+| `shutdown` | none | `null`, and then the daemon exits |
 
-- **Events.** After `subscribe`, the server sends notifications `{"jsonrpc":"2.0","method":"event","params":{…}}` using the same typed events as the Rust event stream. A client renders `state` first and then applies events.
-- **Errors.** Standard JSON-RPC error codes, plus server errors for engine failures (for example port in use) with a stable `data.kind` string a UI can map to its own message.
+- **Events.** After `subscribe`, the server sends notifications `{"jsonrpc":"2.0","method":"event","params":{…}}` for every engine event. Events use serde's external tagging, for example `{"Upload":{"Finished":{…}}}`, and are the same typed events as the Rust event stream. A client renders `state` first and then applies events.
+- **Errors.** `-32700` parse error, `-32600` invalid request, `-32601` unknown method, `-32602` invalid params, and `-32000` for an engine error, with a human-readable message. Batches are not supported.
+- **Secrets.** The state snapshot contains the share links, which hold the token. The socket permissions are what protect it.
+- **Windows.** The intended transport is a named pipe, `\\.\pipe\ca.liminalhq.mailslot`. It is not implemented yet.
 - **Lifecycle.** `mailslotd` runs until SIGTERM or SIGINT, removes its UPnP mapping and its socket on exit, and can run as a systemd user service (`systemctl --user enable --now mailslotd`).
 
 ## Files, paths and names
@@ -360,7 +369,7 @@ The first release sends with dedupe, resume and a watched folder. Sync grows fro
 - Multiple named links with per-link rules and quotas.
 - End-to-end encryption of payloads (age), so plain-HTTP and untrusted-relay transfers stay private.
 - Relay and tunnel hints.
-- A named-pipe transport for `mailslot-ipc` on Windows, and UniFFI or C ABI bindings for in-process use from C++ and C#.
+- UniFFI or C ABI bindings for in-process use from C++ and C#.
 
 ## Acceptance criteria
 

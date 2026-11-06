@@ -96,8 +96,8 @@ Run `mailslotd` (or embed `mailslot-ipc` in your own process) and talk to it ove
 1. Connect to `$XDG_RUNTIME_DIR/ca.liminalhq.mailslot/mailslotd.sock`. Only your user can.
 2. Call `state` and render it.
 3. Call `subscribe`, then apply each `event` notification to your model.
-4. Map user actions to methods: `start`, `stop`, `pause`, `resume`, `rotate_token`, `send`, `queue.*`, `config.*`.
-5. Show errors by `data.kind`, not by message text.
+4. Map user actions to methods: `start`, `stop`, `pause`, `resume`, `rotate_token`, `send`, `settings.*`, `internet.set`.
+5. Show engine errors (code `-32000`) with their message, and treat the other codes as bugs in your client.
 
 A minimal client in Python:
 
@@ -114,7 +114,7 @@ def call(id, method, params=None):
     stream.flush()
 
 call(1, "state")
-call(2, "subscribe")
+call(2, "subscribe")  # then events arrive as {"method": "event", "params": …}
 for line in stream:
     message = json.loads(line)
     if message.get("method") == "event":

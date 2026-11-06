@@ -50,6 +50,17 @@ A `gio::ListStore` of upload items feeds `ListBox::bind_model` for rows, with pr
 - Use built-in style classes first (`boxed-list`, `card`, `pill`, `suggested-action`, `destructive-action`, `flat`, `dim-label`). They follow the system accent colour for free.
 - Render the QR code dark-on-light into a `MemoryTexture` (`MemoryFormat::G8`) with a four-module quiet zone, and keep the texture around 240 px so `GtkPicture` does not request a huge natural size.
 
+## Background work and discovery
+
+- Decode QR codes off the main thread. Download the texture to plain luminance bytes on the main thread (`gdk::TextureDownloader` with `MemoryFormat::R8g8b8a8`), then hand the `Vec<u8>` to `gio::spawn_blocking`. GObjects never cross threads, and plain bytes do. `rqrr::PreparedImage::prepare_from_greyscale` avoids pulling in the `image` crate.
+- `adw::ButtonRow` and extra `AdwPreferencesGroup` children can be added and removed at runtime (`group.add`, `group.remove`), which suits lists of discovered items.
+- mDNS announcements and browsing run on their own thread inside `mdns-sd`, and its receivers are `flume` channels whose `recv_async` works from any executor.
+- A `GApplication` quits as soon as `activate` returns with no window and no hold. If the window is built after an `await`, take `app.hold()` before spawning the future and keep the guard alive until the window is shown.
+
+## Translations
+
+`make pot` runs `scripts/make-pot.sh`, which extracts strings with `xgettext -L Rust` (GNU gettext 0.24 or newer), `-L Glade` for `.ui` files and the desktop-file rules, and merges them into `po/mailslot.pot`. A file that uses `gettext` must be listed in `po/POTFILES.in`.
+
 ## Testing
 
 - GTK must be initialized and used on one thread. Put exactly one `#[test]` in each `ui_*.rs` file, so nextest runs each in its own process, and mark it `#[ignore = "needs display"]`.
