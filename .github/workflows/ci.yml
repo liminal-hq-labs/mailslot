@@ -1,0 +1,815 @@
+# One job per check, so a pull request's checks list names exactly what passed or failed. The test
+# jobs write JUnit XML; publish-test-results.yml posts it to the pull request. A final `required`
+# job gives branch protection a single check to require.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI_IMAGE: ghcr.io/liminal-hq/mailslot-ci:latest
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  image:
+    name: CI image
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the container registry
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Pull requests build the image to prove docker/ still builds, without pushing it. Jobs
+      # below run in the image published from main.
+      - name: Build the CI image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          target: ci-gtk
+          push: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+          tags: |
+            ghcr.io/liminal-hq/mailslot-ci:latest
+            ghcr.io/liminal-hq/mailslot-ci:sha-${{ github.sha }}
+          cache-from: type=gha,scope=ci-gtk
+          cache-to: type=gha,scope=ci-gtk,mode=max
+
+  build:
+    name: Build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container:
+      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trust the GitHub workspace
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: mailslot
+          save-if: true
+
+      - name: Build the workspace
+        id: build
+        run: cargo build --workspace --all-targets --locked
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Build"
+            echo "- Result: \`${{ steps.build.outcome }}\`"
+            echo "- Command: \`cargo build --workspace --all-targets --locked\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  fmt:
+    name: Format
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trust the GitHub workspace
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Check formatting
+        id: fmt
+        run: cargo fmt --all -- --check
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Format"
+            echo "- Result: \`${{ steps.fmt.outcome }}\`"
+            echo "- Command: \`cargo fmt --all -- --check\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  clippy:
+    name: Clippy
+    needs: [build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container:
+      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trust the GitHub workspace
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: mailslot
+          save-if: false
+
+      - name: Lint
+        id: clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Clippy"
+            echo "- Result: \`${{ steps.clippy.outcome }}\`"
+            echo "- Command: \`cargo clippy --workspace --all-targets --locked -- -D warnings\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  test:
+    name: Tests
+    needs: [build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container:
+      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trust the GitHub workspace
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: mailslot
+          save-if: false
+
+      - name: Run tests
+        id: tests
+        run: cargo nextest run --workspace --profile ci --locked
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Tests"
+            echo "- Result: \`${{ steps.tests.outcome }}\`"
+            echo "- Command: \`cargo nextest run --workspace --profile ci --locked\`"
+            echo
+            bash scripts/junit-summary.sh target/nextest/ci/junit.xml
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload rust-test-results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rust-test-results
+          path: target/nextest/ci/junit.xml
+          if-no-files-found: error
+
+  ui-test:
+    name: UI tests
+    needs: [build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    container:
+      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trust the GitHub workspace
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: mailslot
+          save-if: false
+
+      - name: Run display tests under headless weston
+        id: ui
+        env:
+          NEXTEST_PROFILE: ci
+        run: bash scripts/test-ui.sh --profile ci --locked
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## UI tests"
+            echo "- Result: \`${{ steps.ui.outcome }}\`"
+            echo "- Command: \`bash scripts/test-ui.sh\`"
+            echo
+            bash scripts/junit-summary.sh target/nextest/ci/junit.xml
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload ui-test-results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-results
+          path: target/nextest/ci/junit.xml
+          if-no-files-found: error
+
+  smoke:
+    name: Smoke
+    needs: [build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trust the GitHub workspace
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: mailslot
+          save-if: false
+
+      - name: curl and CLI round trips
+        id: smoke
+        run: bash scripts/smoke.sh
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Smoke"
+            echo "- Result: \`${{ steps.smoke.outcome }}\`"
+            echo "- Command: \`bash scripts/smoke.sh\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  upnp-test:
+    name: UPnP test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the dev image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          target: dev-gtk
+          load: true
+          tags: mailslot-dev:local
+          build-args: |
+            USER_UID=1001
+            USER_GID=1001
+          cache-from: type=gha,scope=dev-gtk
+          cache-to: type=gha,scope=dev-gtk,mode=max
+
+      - name: Build the miniupnpd gateway image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          target: upnp-test
+          load: true
+          tags: mailslot-upnp-test:local
+          cache-from: type=gha,scope=upnp-test
+          cache-to: type=gha,scope=upnp-test,mode=max
+
+      # The client container maps the workspace as the runner user (1001) and uses isolated bridges.
+      - name: Map a port through miniupnpd
+        id: upnp
+        run: bash scripts/upnp-test.sh
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## UPnP test"
+            echo "- Result: \`${{ steps.upnp.outcome }}\`"
+            echo "- Command: \`bash scripts/upnp-test.sh\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  deny:
+    name: Dependency policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trust the GitHub workspace
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: cargo deny
+        id: deny
+        run: cargo deny check
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Dependency policy"
+            echo "- Result: \`${{ steps.deny.outcome }}\`"
+            echo "- Command: \`cargo deny check\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  headers:
+    name: Licence headers
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Licence headers
+        id: check
+        run: bash scripts/check-headers.sh
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Licence headers"
+            echo "- Result: \`${{ steps.check.outcome }}\`"
+            echo "- Command: \`bash scripts/check-headers.sh\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  style:
+    name: System accent style
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: No colour literals outside style.css
+        id: check
+        run: bash scripts/check-style.sh
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## System accent style"
+            echo "- Result: \`${{ steps.check.outcome }}\`"
+            echo "- Command: \`bash scripts/check-style.sh\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  data-check:
+    name: Data check
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trust the GitHub workspace
+        run: git config --global --add safe.directory "${GITHUB_WORKSPACE}"
+
+      - name: Desktop, AppStream, XML, icons and banner
+        id: check
+        run: bash scripts/check-data.sh
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Data check"
+            echo "- Result: \`${{ steps.check.outcome }}\`"
+            echo "- Command: \`bash scripts/check-data.sh\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  docs-lint:
+    name: Docs lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lint Markdown
+        id: lint
+        run: >-
+          docker run --rm -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace
+          davidanson/markdownlint-cli2:v0.17.2 "**/*.md" "#target" "#node_modules"
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Docs lint"
+            echo "- Result: \`${{ steps.lint.outcome }}\`"
+            echo "- Command: \`markdownlint-cli2 "**/*.md"\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  docker-lint:
+    name: Docker, shell and workflow lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: hadolint
+        id: hadolint
+        run: >-
+          docker run --rm -i -v "${GITHUB_WORKSPACE}/.hadolint.yaml:/.hadolint.yaml:ro"
+          hadolint/hadolint hadolint --config /.hadolint.yaml - < docker/Dockerfile
+
+      - name: shellcheck
+        id: shellcheck
+        run: >-
+          docker run --rm -v "${GITHUB_WORKSPACE}:/mnt" -w /mnt koalaman/shellcheck:stable
+          scripts/*.sh docker/*.sh packaging/appimage/AppRun
+
+      - name: actionlint
+        id: actionlint
+        run: docker run --rm -v "${GITHUB_WORKSPACE}:/repo" -w /repo rhysd/actionlint:latest -color
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Docker, shell and workflow lint"
+            echo "- Result: \`${{ steps.actionlint.outcome }}\`"
+            echo "- Command: \`hadolint, shellcheck, actionlint\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  core-embed:
+    name: Core embed
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install the pinned Rust toolchain
+        run: rustup toolchain install
+
+      - name: Cache Rust build output
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: mailslot-embed
+
+      # The runner image has no GTK 4 development files, so this proves the core builds without them.
+      - name: Check GTK is absent
+        run: "! pkg-config --exists gtk4"
+
+      - name: Build the core with every feature
+        id: build
+        run: cargo build -p mailslot-core --all-features --locked
+
+      - name: Build the core with no default features
+        run: cargo build -p mailslot-core --no-default-features --locked
+
+      - name: Run the embed example
+        id: embed
+        run: cargo run -p mailslot-core --example embed --locked
+
+      - name: Check the core has no UI dependency
+        id: tree
+        run: |
+          if cargo tree -p mailslot-core --all-features --locked | grep -E '(^|[ │├└─]+)(gtk4|glib|gio|libadwaita)[ -]'; then
+            echo "mailslot-core depends on a GTK crate" >&2
+            exit 1
+          fi
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Core embed"
+            echo "- Result: \`${{ steps.embed.outcome }}\`"
+            echo "- Command: \`cargo run -p mailslot-core --example embed\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  package-deb:
+    name: Package deb
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the Package deb image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          target: pkg-deb
+          load: true
+          tags: mailslot-pkg-deb:local
+          cache-from: type=gha,scope=pkg-deb
+          cache-to: type=gha,scope=pkg-deb,mode=max
+
+      - name: Build the package
+        id: package
+        run: |
+          mkdir -p dist
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e CARGO_HOME=/tmp/cargo \
+            -e RUSTUP_TOOLCHAIN=1.98.0 -e CARGO_TARGET_DIR=/tmp/target \
+            -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
+            mailslot-pkg-deb:local bash scripts/package-deb.sh
+
+      - name: Install and run the package
+        id: verify
+        run: bash scripts/test-package.sh deb
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Package deb"
+            echo "- Result: \`${{ steps.verify.outcome }}\`"
+            echo "- Command: \`bash scripts/package-deb.sh\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload deb-package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deb-package
+          path: dist/*.deb
+          if-no-files-found: error
+
+  package-rpm:
+    name: Package rpm
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the Package rpm image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          target: pkg-rpm
+          load: true
+          tags: mailslot-pkg-rpm:local
+          cache-from: type=gha,scope=pkg-rpm
+          cache-to: type=gha,scope=pkg-rpm,mode=max
+
+      - name: Build the package
+        id: package
+        run: |
+          mkdir -p dist
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e CARGO_HOME=/tmp/cargo \
+            -e RUSTUP_TOOLCHAIN=1.98.0 -e CARGO_TARGET_DIR=/tmp/target \
+            -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
+            mailslot-pkg-rpm:local bash scripts/package-rpm.sh
+
+      - name: Install and run the package
+        id: verify
+        run: bash scripts/test-package.sh rpm
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Package rpm"
+            echo "- Result: \`${{ steps.verify.outcome }}\`"
+            echo "- Command: \`bash scripts/package-rpm.sh\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload rpm-package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpm-package
+          path: dist/*.rpm
+          if-no-files-found: error
+
+  package-appimage:
+    name: Package AppImage
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the Package AppImage image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          target: pkg-appimage
+          load: true
+          tags: mailslot-pkg-appimage:local
+          cache-from: type=gha,scope=pkg-appimage
+          cache-to: type=gha,scope=pkg-appimage,mode=max
+
+      - name: Build the package
+        id: package
+        run: |
+          mkdir -p dist
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e CARGO_HOME=/tmp/cargo \
+            -e RUSTUP_TOOLCHAIN=1.98.0 -e CARGO_TARGET_DIR=/tmp/target \
+            -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
+            mailslot-pkg-appimage:local bash scripts/package-appimage.sh
+
+      - name: Install and run the package
+        id: verify
+        run: bash scripts/test-package.sh appimage
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Package AppImage"
+            echo "- Result: \`${{ steps.verify.outcome }}\`"
+            echo "- Command: \`bash scripts/package-appimage.sh\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload appimage-package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage-package
+          path: dist/*.AppImage*
+          if-no-files-found: error
+
+  package-cli-tarball:
+    name: Package CLI tarball
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build the Package CLI tarball image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker
+          target: pkg-musl
+          load: true
+          tags: mailslot-pkg-musl:local
+          cache-from: type=gha,scope=pkg-musl
+          cache-to: type=gha,scope=pkg-musl,mode=max
+
+      - name: Build the package
+        id: package
+        run: |
+          mkdir -p dist
+          docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e CARGO_HOME=/tmp/cargo \
+            -e RUSTUP_TOOLCHAIN=1.98.0 -e CARGO_TARGET_DIR=/tmp/target \
+            -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
+            mailslot-pkg-musl:local bash scripts/package-cli-tarball.sh
+
+      - name: Install and run the package
+        id: verify
+        run: bash scripts/test-package.sh cli-tarball
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Package CLI tarball"
+            echo "- Result: \`${{ steps.verify.outcome }}\`"
+            echo "- Command: \`bash scripts/package-cli-tarball.sh\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload cli-tarball-package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-tarball-package
+          path: dist/*.tar.gz
+          if-no-files-found: error
+
+  flatpak:
+    name: Flatpak
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container:
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-51
+      options: --privileged
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build the Flatpak
+        id: flatpak
+        run: bash scripts/package-flatpak.sh
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Flatpak"
+            echo "- Result: \`${{ steps.flatpak.outcome }}\`"
+            echo "- Command: \`bash scripts/package-flatpak.sh\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload flatpak-package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: flatpak-package
+          path: dist/*.flatpak
+          if-no-files-found: error
+
+  # Branch protection requires this one check. A job skipped on purpose (the Flatpak on a pull
+  # request) counts as passing, anything else must have succeeded.
+  required:
+    name: required
+    if: always()
+    needs: [image, build, fmt, clippy, test, ui-test, smoke, upnp-test, deny, headers, style, data-check, docs-lint, docker-lint, core-embed, package-deb, package-rpm, package-appimage, package-cli-tarball, flatpak]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check every job
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          if echo "$RESULTS" | jq -e 'any(.[]; .result != "success" and .result != "skipped")' >/dev/null; then
+            echo "A required job did not succeed" >&2
+            exit 1
+          fi
+
+      # Consumed by publish-test-results.yml. The pull_request event's token is read-only for fork
+      # and Dependabot PRs, so results are published from a separate workflow_run workflow.
+      - name: Upload event file
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: event-file
+          path: ${{ github.event_path }}

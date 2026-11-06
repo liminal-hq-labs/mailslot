@@ -16,7 +16,7 @@ missing=()
 is_candidate() {
 	case "$1" in
 	*/Cargo.toml | Cargo.toml | *Cargo.lock | *.json | *.jsonc | *.md | *.png | *.zsync) return 1 ;;
-	*.rs | *.sh | *.yml | *.yaml | *.js | *.css | *.ui | *.svg | *.toml | *.desktop | *.xml | *.1 | *.html) return 0 ;;
+	*.rs | *.sh | *.py | *.yml | *.yaml | *.js | *.css | *.ui | *.svg | *.toml | *.desktop | *.xml | *.1 | *.html) return 0 ;;
 	*/Dockerfile | Dockerfile | Makefile | */PKGBUILD | PKGBUILD) return 0 ;;
 	*) return 1 ;;
 	esac
