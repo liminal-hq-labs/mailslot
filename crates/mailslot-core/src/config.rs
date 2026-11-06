@@ -107,6 +107,9 @@ pub struct Sharing {
 	pub stop_after_files: u32,
 	/// Stop sharing after this many minutes; `0` means no timer.
 	pub auto_stop_minutes: u32,
+	/// Names this link. It travels in `mailslot://` links, and senders using it are
+	/// filed under this name when subfolders are by sender label.
+	pub link_label: String,
 }
 
 impl Default for Sharing {
@@ -118,6 +121,7 @@ impl Default for Sharing {
 			expiry_minutes: 60,
 			stop_after_files: 0,
 			auto_stop_minutes: 0,
+			link_label: String::new(),
 		}
 	}
 }
@@ -220,6 +224,9 @@ pub struct Network {
 	pub public_ip_lookup: bool,
 	/// Interface (name or address) to advertise in the link; empty means automatic.
 	pub interface: String,
+	/// Announce this share on the local network with mDNS while sharing. The secret is
+	/// never part of the announcement.
+	pub mdns: bool,
 }
 
 /// Notification and history settings.

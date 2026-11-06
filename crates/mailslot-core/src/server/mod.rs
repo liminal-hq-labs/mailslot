@@ -70,6 +70,8 @@ pub struct ServerSettings {
 	pub lockout_threshold: u32,
 	/// How long a lockout lasts.
 	pub lockout_duration: Duration,
+	/// Sender label used when a request names none (the link's own label).
+	pub default_sender: Option<String>,
 }
 
 impl Default for ServerSettings {
@@ -102,6 +104,7 @@ impl ServerSettings {
 			verify_on_receive: c.storage.verify_on_receive,
 			lockout_threshold: c.security.bad_token_lockout,
 			lockout_duration: Duration::from_secs(600),
+			default_sender: Some(c.sharing.link_label.trim().to_owned()).filter(|l| !l.is_empty()),
 		}
 	}
 }

@@ -17,10 +17,12 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
-default = ["server", "client", "portmap", "tls"]
+default = ["server", "client", "portmap", "tls", "watch", "discovery"]
 server = ["dep:axum", "dep:hyper", "dep:hyper-util", "dep:http-body-util", "dep:tower", "dep:rustix"]
 client = ["dep:reqwest"]
 portmap = ["dep:igd-next", "dep:crab_nat", "dep:netdev"]
+watch = ["client", "dep:notify"]
+discovery = ["dep:mdns-sd", "dep:rustix"]
 tls = ["dep:rustls", "dep:tokio-rustls", "dep:rcgen", "reqwest?/rustls-no-provider"]
 
 [dependencies]
@@ -49,7 +51,9 @@ hyper = { workspace = true, optional = true }
 hyper-util = { workspace = true, optional = true }
 http-body-util = { workspace = true, optional = true }
 tower = { workspace = true, optional = true }
-rustix = { version = "1", features = ["fs"], optional = true }
+rustix = { version = "1", features = ["fs", "system"], optional = true }
+notify = { version = "8", default-features = false, features = ["macos_fsevent"], optional = true }
+mdns-sd = { version = "0.21", optional = true }
 reqwest = { version = "0.13", default-features = false, features = ["stream", "json"], optional = true }
 igd-next = { version = "0.18", features = ["aio_tokio"], optional = true }
 crab_nat = { version = "0.8", optional = true }

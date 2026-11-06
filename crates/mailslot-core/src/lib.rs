@@ -23,6 +23,8 @@
 //! | `client` (default) | the resumable [`client`] and `Engine::send` |
 //! | `portmap` (default) | UPnP-IGD, PCP and NAT-PMP port mapping |
 //! | `tls` (default) | self-signed HTTPS with public-key pinning |
+//! | `watch` (default) | debounced folder watching and the persisted send queue |
+//! | `discovery` (default) | opt-in mDNS advertising and browsing |
 //!
 //! # Example
 //!
@@ -71,6 +73,8 @@
 #[cfg(feature = "client")]
 pub mod client;
 pub mod config;
+#[cfg(feature = "discovery")]
+pub mod discovery;
 #[cfg(feature = "server")]
 mod engine;
 pub mod error;
@@ -78,6 +82,8 @@ pub mod events;
 pub mod history;
 pub mod naming;
 pub mod netinfo;
+#[cfg(feature = "client")]
+pub mod outbox;
 #[cfg(feature = "portmap")]
 pub mod portmap;
 pub mod proto;
@@ -87,6 +93,8 @@ pub mod snippets;
 #[cfg(feature = "tls")]
 pub mod tls;
 pub mod token;
+#[cfg(feature = "watch")]
+pub mod watch;
 
 pub use error::{Error, Result};
 
