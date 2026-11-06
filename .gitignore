@@ -11,3 +11,10 @@
 /dist/
 /build-aux/flatpak/repo/
 /build-aux/flatpak/.flatpak-builder/
+
+# Test and packaging output
+/test-results/
+/AppDir/
+*.AppImage
+*.zsync
+/build-aux/flatpak/cargo-sources.json
