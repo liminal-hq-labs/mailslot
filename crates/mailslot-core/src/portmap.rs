@@ -11,13 +11,13 @@
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::num::NonZeroU16;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use igd_next::PortMappingProtocol;
 use igd_next::aio::Gateway;
 use igd_next::aio::tokio::Tokio;
 
-use crate::events::{Diagnostic, DiagnosticKind};
+use crate::events::{Diagnostic, DiagnosticKind, InternetDetails};
 use crate::netinfo;
 
 /// Prefix of the description Mailslot writes on the router, used to find stale mappings.
@@ -30,7 +30,8 @@ const MIN_LEASE: Duration = Duration::from_secs(120);
 pub struct PortMapOptions {
 	/// The local TCP port to expose.
 	pub local_port: u16,
-	/// The LAN address to forward to; detected when `None`.
+	/// The LAN address to forward to. When `None`, the address the system uses to reach the
+	/// router is used.
 	pub local_ip: Option<IpAddr>,
 	/// Requested lease (clamped to at least two minutes). One hour by default.
 	pub lease: Duration,
@@ -89,6 +90,7 @@ pub struct ActiveMapping {
 	protocol: Protocol,
 	lease: Duration,
 	warnings: Vec<Diagnostic>,
+	details: InternetDetails,
 }
 
 impl std::fmt::Debug for ActiveMapping {
@@ -104,6 +106,18 @@ fn diag(kind: DiagnosticKind, message: impl Into<String>) -> Diagnostic {
 	Diagnostic {
 		kind,
 		message: message.into(),
+		details: None,
+	}
+}
+
+fn diag_with(
+	kind: DiagnosticKind,
+	message: impl Into<String>,
+	details: &InternetDetails,
+) -> Diagnostic {
+	Diagnostic {
+		details: Some(Box::new(details.clone())),
+		..diag(kind, message)
 	}
 }
 
@@ -136,10 +150,16 @@ impl ActiveMapping {
 		&self.warnings
 	}
 
+	/// The router and address facts behind this mapping.
+	pub fn details(&self) -> &InternetDetails {
+		&self.details
+	}
+
 	/// Renews the lease. Call about halfway through it.
 	pub async fn renew(&mut self) -> Result<(), Diagnostic> {
 		let lease = self.lease;
-		match &mut self.backend {
+		let started = Instant::now();
+		let result = match &mut self.backend {
 			Backend::Upnp {
 				gateway,
 				local,
@@ -165,12 +185,23 @@ impl ActiveMapping {
 					format!("The router would not renew the mapping: {e}"),
 				)
 			}),
+		};
+		match &result {
+			Ok(()) => tracing::info!(
+				protocol = ?self.protocol,
+				lease_secs = lease.as_secs(),
+				elapsed_ms = started.elapsed().as_millis() as u64,
+				"renewed router port mapping"
+			),
+			Err(d) => tracing::warn!(error = %d.message, "router port mapping renewal failed"),
 		}
+		result
 	}
 
 	/// Removes the mapping from the router.
 	pub async fn remove(self) -> Result<(), Diagnostic> {
-		match self.backend {
+		let (protocol, external) = (self.protocol, self.external);
+		let result = match self.backend {
 			Backend::Upnp {
 				gateway,
 				external_port,
@@ -190,7 +221,18 @@ impl ActiveMapping {
 					format!("Could not remove the router mapping: {e}"),
 				)
 			}),
+		};
+		match &result {
+			Ok(()) => tracing::info!(
+				?protocol,
+				port = external.port(),
+				"removed router port mapping"
+			),
+			Err(d) => {
+				tracing::warn!(?protocol, error = %d.message, "could not remove router port mapping")
+			}
 		}
+		result
 	}
 }
 
@@ -210,24 +252,157 @@ fn search_options(opts: &PortMapOptions) -> igd_next::SearchOptions {
 	s
 }
 
-async fn lan_ip(opts: &PortMapOptions) -> Option<IpAddr> {
+/// The address the router should forward to: the override when given, otherwise the address
+/// the operating system uses to reach the router, never a guess from a list of interfaces.
+async fn local_ip_for(opts: &PortMapOptions, gateway: IpAddr) -> Option<IpAddr> {
 	if let Some(ip) = opts.local_ip {
+		tracing::debug!(%ip, "using the configured local address for the mapping");
 		return Some(ip);
 	}
+	let ip = netinfo::local_addr_towards(SocketAddr::new(gateway, 1900)).await;
+	tracing::debug!(%gateway, local = ?ip, "address the system uses to reach the router");
+	ip
+}
+
+/// Whether `local` shares a subnet with `gateway`, when that can be told. The prefix comes
+/// from the interface that owns `local`, falling back to /24 for an unknown address.
+async fn on_router_network(local: IpAddr, gateway: IpAddr) -> Option<bool> {
+	let (IpAddr::V4(local), IpAddr::V4(gateway)) = (local, gateway) else {
+		return None;
+	};
+	let prefix = tokio::task::spawn_blocking(move || {
+		netdev::get_interfaces()
+			.into_iter()
+			.flat_map(|i| i.ipv4)
+			.find(|n| n.addr() == local)
+			.map(|n| n.prefix_len())
+	})
+	.await
+	.ok()
+	.flatten()
+	.unwrap_or(24)
+	.min(32);
+	let mask = u32::MAX.checked_shl(32 - u32::from(prefix)).unwrap_or(0);
+	Some(u32::from(local) & mask == u32::from(gateway) & mask)
+}
+
+async fn interface_of(ip: IpAddr) -> Option<String> {
 	netinfo::lan_addrs()
 		.await
 		.into_iter()
-		.find(|a| a.ip.is_ipv4())
-		.map(|a| a.ip)
+		.find(|a| a.ip == ip)
+		.map(|a| a.interface)
+}
+
+/// Reads the manufacturer and model from the router's device description. Best effort, with a
+/// short timeout; the answer only improves diagnostics.
+async fn describe_router(gateway: &Gateway<Tokio>) -> Option<String> {
+	use tokio::io::{AsyncReadExt, AsyncWriteExt};
+	let path = if gateway.root_url.starts_with('/') {
+		gateway.root_url.clone()
+	} else if let Ok(u) = url::Url::parse(&gateway.root_url) {
+		u.path().to_owned()
+	} else {
+		return None;
+	};
+	let fetch = async {
+		let mut stream = tokio::net::TcpStream::connect(gateway.addr).await.ok()?;
+		let request = format!(
+			"GET {path} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\nAccept: text/xml\r\n\r\n",
+			gateway.addr
+		);
+		stream.write_all(request.as_bytes()).await.ok()?;
+		let mut body = Vec::new();
+		stream.take(64 * 1024).read_to_end(&mut body).await.ok()?;
+		Some(String::from_utf8_lossy(&body).into_owned())
+	};
+	let text = tokio::time::timeout(Duration::from_secs(2), fetch)
+		.await
+		.ok()??;
+	let make = xml_tag(&text, "manufacturer");
+	let model = xml_tag(&text, "modelName").or_else(|| xml_tag(&text, "friendlyName"));
+	let number = xml_tag(&text, "modelNumber");
+	let parts: Vec<String> = [make, model, number].into_iter().flatten().collect();
+	(!parts.is_empty()).then(|| parts.join(" "))
+}
+
+fn xml_tag(text: &str, name: &str) -> Option<String> {
+	let open = format!("<{name}>");
+	let start = text.find(&open)? + open.len();
+	let end = text[start..].find(&format!("</{name}>"))?;
+	let v = text[start..start + end].trim();
+	(!v.is_empty()).then(|| v.chars().take(80).collect())
+}
+
+/// The raw UPnP error code and text behind an `AddPortMapping` failure, when there is one.
+fn add_error_code(e: &igd_next::AddPortError) -> (Option<u16>, String) {
+	use igd_next::AddPortError as E;
+	match e {
+		E::ActionNotAuthorized => (Some(606), "Action not authorized".into()),
+		E::DescriptionTooLong => (Some(605), "String argument too long".into()),
+		E::PortInUse => (Some(718), "ConflictInMappingEntry".into()),
+		E::SamePortValuesRequired => (Some(724), "SamePortValuesRequired".into()),
+		E::OnlyPermanentLeasesSupported => (Some(725), "OnlyPermanentLeasesSupported".into()),
+		E::RequestError(igd_next::RequestError::ErrorCode(c, t)) => (Some(*c), t.clone()),
+		other => (None, other.to_string()),
+	}
+}
+
+fn add_any_error_code(e: &igd_next::AddAnyPortError) -> (Option<u16>, String) {
+	use igd_next::AddAnyPortError as E;
+	match e {
+		E::ActionNotAuthorized => (Some(606), "Action not authorized".into()),
+		E::NoPortsAvailable => (Some(728), "NoPortsAvailable".into()),
+		E::ExternalPortInUse => (Some(718), "ConflictInMappingEntry".into()),
+		E::RequestError(igd_next::RequestError::ErrorCode(c, t)) => (Some(*c), t.clone()),
+		other => (None, other.to_string()),
+	}
+}
+
+fn format_upnp_error(code: Option<u16>, text: &str) -> String {
+	match code {
+		Some(c) => format!("UPnP error {c}: {text}"),
+		None => format!("UPnP error: {text}"),
+	}
+}
+
+/// The explanation for a refused `AddPortMapping`, naming the address that was asked for.
+fn refusal_message(
+	code: Option<u16>,
+	text: &str,
+	local: SocketAddr,
+	gateway: IpAddr,
+	on_network: Option<bool>,
+) -> String {
+	let head = format_upnp_error(code, text);
+	if code == Some(606) {
+		let mut m = format!(
+			"{head}. The router at {gateway} would not forward port {} to {}. Routers running MiniUPnPd, including UniFi, only forward to the address that makes the request, so check that UPnP is enabled for this network and that the request came from this machine's own address.",
+			local.port(),
+			local.ip()
+		);
+		if on_network == Some(false) {
+			m.push_str(&format!(
+				" {} is not on the router's network, so the router will refuse to forward to it.",
+				local.ip()
+			));
+		}
+		m
+	} else {
+		format!(
+			"{head}. The router refused the mapping; UPnP port mapping may be disabled in its settings."
+		)
+	}
 }
 
 /// Removes mappings an earlier Mailslot run left on the router (matched by description
 /// and by forwarding to this machine). Returns the external ports that were freed.
 pub async fn cleanup_stale(opts: &PortMapOptions) -> Vec<u16> {
-	let Some(local_ip) = lan_ip(opts).await else {
+	let Ok(gateway) = igd_next::aio::tokio::search_gateway(search_options(opts)).await else {
+		tracing::debug!("stale mapping cleanup skipped: no UPnP gateway answered");
 		return Vec::new();
 	};
-	let Ok(gateway) = igd_next::aio::tokio::search_gateway(search_options(opts)).await else {
+	let Some(local_ip) = local_ip_for(opts, gateway.addr.ip()).await else {
 		return Vec::new();
 	};
 	let mut stale = Vec::new();
@@ -254,6 +429,7 @@ pub async fn cleanup_stale(opts: &PortMapOptions) -> Vec<u16> {
 			removed.push(port);
 		}
 	}
+	tracing::info!(client = %local_ip, ?removed, "stale mapping cleanup finished");
 	removed
 }
 
@@ -279,39 +455,95 @@ fn nat_warnings(external_ip: IpAddr, public_ip: Option<IpAddr>) -> Vec<Diagnosti
 				"The address your router reports differs from the one the internet sees, so another layer of NAT is likely in the way.",
 			));
 	}
+	for d in &w {
+		tracing::warn!(kind = ?d.kind, %external_ip, "{}", d.message);
+	}
 	w
 }
 
 /// Opens a mapping. On failure the diagnostic explains why in plain words.
 pub async fn open(opts: &PortMapOptions) -> Result<ActiveMapping, Diagnostic> {
+	let started = Instant::now();
 	if opts.local_port == 0 {
 		return Err(diag(DiagnosticKind::Other, "There is no port to open yet."));
 	}
-	let Some(local_ip) = lan_ip(opts).await else {
-		return Err(diag(
-			DiagnosticKind::NoGateway,
-			"No local network address was found, so the router cannot be asked to forward a port.",
-		));
-	};
 	let lease = clamp_lease(opts.lease);
-	let local = SocketAddr::new(local_ip, opts.local_port);
+	tracing::info!(
+		port = opts.local_port,
+		lease_secs = lease.as_secs(),
+		"asking the router to open a port"
+	);
 
+	let searched = Instant::now();
 	let upnp_error = match igd_next::aio::tokio::search_gateway(search_options(opts)).await {
-		Ok(gateway) => match open_upnp(gateway, local, lease, opts).await {
-			Ok(m) => return Ok(m),
-			Err(d) => d,
-		},
-		Err(_) => diag(
-			DiagnosticKind::NoGateway,
-			"No router answered. UPnP may be switched off on the router, or this network has no router that supports it. Use the manual port-forward instructions instead.",
-		),
+		Ok(gateway) => {
+			let router = describe_router(&gateway).await;
+			tracing::info!(
+				gateway = %gateway.addr,
+				location = %gateway.root_url,
+				router = router.as_deref().unwrap_or("unknown"),
+				elapsed_ms = searched.elapsed().as_millis() as u64,
+				"found a UPnP gateway"
+			);
+			let gateway_ip = gateway.addr.ip();
+			let mut details = InternetDetails {
+				gateway: Some(gateway_ip),
+				router,
+				..Default::default()
+			};
+			match local_ip_for(opts, gateway_ip).await {
+				Some(local_ip) => {
+					details.internal_client = Some(local_ip);
+					details.interface = interface_of(local_ip).await;
+					let local = SocketAddr::new(local_ip, opts.local_port);
+					match open_upnp(gateway, local, lease, opts, details).await {
+						Ok(m) => {
+							tracing::info!(
+								external = %m.external(),
+								elapsed_ms = started.elapsed().as_millis() as u64,
+								"router port mapping is open"
+							);
+							return Ok(m);
+						}
+						Err(d) => d,
+					}
+				}
+				None => diag_with(
+					DiagnosticKind::NoGateway,
+					"No local network address could be used to reach the router, so it cannot be asked to forward a port.",
+					&details,
+				),
+			}
+		}
+		Err(e) => {
+			tracing::warn!(
+				error = %e,
+				elapsed_ms = searched.elapsed().as_millis() as u64,
+				"no UPnP gateway answered"
+			);
+			diag(
+				DiagnosticKind::NoGateway,
+				"No router answered. UPnP may be switched off on the router, or this network has no router that supports it. Use the manual port-forward instructions instead.",
+			)
+		}
 	};
+	tracing::warn!(kind = ?upnp_error.kind, error = %upnp_error.message, "UPnP mapping failed");
 
-	if opts.fallback_pmp
-		&& opts.ssdp_addr.is_none()
-		&& let Some(m) = open_pmp(local, lease, opts).await
-	{
-		return Ok(m);
+	if opts.fallback_pmp && opts.ssdp_addr.is_none() {
+		let gw = netinfo::default_gateway().await;
+		let local_ip = match (opts.local_ip, gw) {
+			(Some(ip), _) => Some(ip),
+			(None, Some(gw)) => local_ip_for(opts, gw.into()).await,
+			(None, None) => netinfo::default_route_ip().await,
+		};
+		if let Some(local_ip) = local_ip {
+			let local = SocketAddr::new(local_ip, opts.local_port);
+			if let Some(m) = open_pmp(local, lease, opts).await {
+				tracing::info!(protocol = ?m.protocol(), external = %m.external(), "mapped through PCP or NAT-PMP");
+				return Ok(m);
+			}
+			tracing::debug!("PCP and NAT-PMP did not answer");
+		}
 	}
 	Err(upnp_error)
 }
@@ -321,58 +553,140 @@ async fn open_upnp(
 	local: SocketAddr,
 	lease: Duration,
 	opts: &PortMapOptions,
+	mut details: InternetDetails,
 ) -> Result<ActiveMapping, Diagnostic> {
-	let external_ip = gateway.get_external_ip().await.map_err(|e| {
-		diag(
-			DiagnosticKind::MappingRefused,
-			format!("The router answered but would not tell us its internet address: {e}"),
-		)
-	})?;
+	let gateway_ip = gateway.addr.ip();
+	let on_network = on_router_network(local.ip(), gateway_ip).await;
+	if on_network == Some(false) {
+		tracing::warn!(
+			local = %local.ip(),
+			gateway = %gateway_ip,
+			"the local address is not on the router's network"
+		);
+	}
+	let asked = Instant::now();
+	let external_ip = match gateway.get_external_ip().await {
+		Ok(ip) => ip,
+		Err(e) => {
+			let (code, text) = match &e {
+				igd_next::GetExternalIpError::ActionNotAuthorized => {
+					(Some(606), "Action not authorized".to_owned())
+				}
+				igd_next::GetExternalIpError::RequestError(igd_next::RequestError::ErrorCode(
+					c,
+					t,
+				)) => (Some(*c), t.clone()),
+				other => (None, other.to_string()),
+			};
+			tracing::warn!(?code, %text, "GetExternalIPAddress failed");
+			details.error_code = code;
+			details.error_text = Some(text.clone());
+			return Err(diag_with(
+				DiagnosticKind::MappingRefused,
+				format!(
+					"{}. The router answered but would not tell us its internet address.",
+					format_upnp_error(code, &text)
+				),
+				&details,
+			));
+		}
+	};
+	tracing::info!(
+		%external_ip,
+		elapsed_ms = asked.elapsed().as_millis() as u64,
+		"GetExternalIPAddress answered"
+	);
 	let secs = lease.as_secs() as u32;
 	let desc = description();
+	tracing::info!(
+		internal_client = %local.ip(),
+		internal_port = local.port(),
+		external_port = local.port(),
+		lease_secs = secs,
+		"AddPortMapping request"
+	);
+	let added = Instant::now();
+	let refused = |details: &mut InternetDetails, code: Option<u16>, text: String| {
+		tracing::warn!(?code, %text, internal_client = %local.ip(), "AddPortMapping refused");
+		details.error_code = code;
+		details.error_text = Some(text.clone());
+		diag_with(
+			DiagnosticKind::MappingRefused,
+			refusal_message(code, &text, local, gateway_ip, on_network),
+			details,
+		)
+	};
 	let external_port = match gateway
 		.add_port(PortMappingProtocol::TCP, local.port(), local, secs, &desc)
 		.await
 	{
 		Ok(()) => local.port(),
-		Err(igd_next::AddPortError::PortInUse) => gateway
-			.add_any_port(PortMappingProtocol::TCP, local, secs, &desc)
-			.await
-			.map_err(|e| {
-				diag(
-					DiagnosticKind::PortConflict,
-					format!(
-						"Port {} is already forwarded to another device and no other port could be used: {e}",
-						local.port()
-					),
-				)
-			})?,
+		Err(igd_next::AddPortError::PortInUse) => {
+			tracing::info!(
+				port = local.port(),
+				"external port is in use; asking for another"
+			);
+			match gateway
+				.add_any_port(PortMappingProtocol::TCP, local, secs, &desc)
+				.await
+			{
+				Ok(p) => p,
+				Err(e) => {
+					let (code, text) = add_any_error_code(&e);
+					if code == Some(606) {
+						return Err(refused(&mut details, code, text));
+					}
+					details.error_code = code;
+					details.error_text = Some(text.clone());
+					return Err(diag_with(
+						DiagnosticKind::PortConflict,
+						format!(
+							"{}. Port {} is already forwarded to another device and no other port could be used.",
+							format_upnp_error(code, &text),
+							local.port()
+						),
+						&details,
+					));
+				}
+			}
+		}
 		Err(igd_next::AddPortError::OnlyPermanentLeasesSupported) => {
-			return Err(diag(
+			let mut d = diag_with(
 				DiagnosticKind::MappingRefused,
-				"The router only supports permanent mappings. Mailslot never creates those; use the manual port-forward instructions.",
-			));
+				"UPnP error 725: OnlyPermanentLeasesSupported. The router only supports permanent mappings. Mailslot never creates those; use the manual port-forward instructions.",
+				&details,
+			);
+			if let Some(x) = d.details.as_mut() {
+				x.error_code = Some(725);
+				x.error_text = Some("OnlyPermanentLeasesSupported".into());
+			}
+			tracing::warn!("router only supports permanent mappings");
+			return Err(d);
 		}
 		Err(igd_next::AddPortError::SamePortValuesRequired) => {
-			return Err(diag(
+			tracing::warn!("router needs identical internal and external ports");
+			return Err(diag_with(
 				DiagnosticKind::PortConflict,
-				"The router needs the same internal and external port, and that port is not free.",
+				"UPnP error 724: SamePortValuesRequired. The router needs the same internal and external port, and that port is not free.",
+				&details,
 			));
 		}
 		Err(e) => {
-			return Err(diag(
-				DiagnosticKind::MappingRefused,
-				format!(
-					"The router refused the mapping ({e}). UPnP port mapping may be disabled in its settings."
-				),
-			));
+			let (code, text) = add_error_code(&e);
+			return Err(refused(&mut details, code, text));
 		}
 	};
+	tracing::info!(
+		external_port,
+		elapsed_ms = added.elapsed().as_millis() as u64,
+		"AddPortMapping accepted"
+	);
 	Ok(ActiveMapping {
 		external: SocketAddr::new(external_ip, external_port),
 		protocol: Protocol::Upnp,
 		lease,
 		warnings: nat_warnings(external_ip, opts.public_ip),
+		details,
 		backend: Backend::Upnp {
 			gateway: Box::new(gateway),
 			local,
@@ -387,6 +701,7 @@ async fn open_pmp(
 	opts: &PortMapOptions,
 ) -> Option<ActiveMapping> {
 	let gw = netinfo::default_gateway().await?;
+	tracing::debug!(%gw, internal_client = %local.ip(), "trying PCP and NAT-PMP");
 	let internal = NonZeroU16::new(local.port())?;
 	let options = crab_nat::PortMappingOptions {
 		external_port: Some(internal),
@@ -419,6 +734,11 @@ async fn open_pmp(
 		protocol,
 		lease: Duration::from_secs(u64::from(mapping.lifetime())),
 		warnings,
+		details: InternetDetails {
+			gateway: Some(gw.into()),
+			internal_client: Some(local.ip()),
+			..Default::default()
+		},
 		backend: Backend::Crab(Box::new(mapping)),
 	})
 }

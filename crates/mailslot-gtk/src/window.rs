@@ -575,6 +575,14 @@ impl MailslotWindow {
 				.map(|u| {
 					if u.host == "127.0.0.1" {
 						gettext("This computer (127.0.0.1)")
+					} else if let Some(kind) = &u.virtual_kind {
+						format!(
+							"{} ({}, {})",
+							u.label,
+							u.host,
+							gettext("{kind}, not reachable from other devices")
+								.replace("{kind}", kind)
+						)
 					} else {
 						format!("{} ({})", u.label, u.host)
 					}
