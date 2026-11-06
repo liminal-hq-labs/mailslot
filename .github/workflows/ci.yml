@@ -534,13 +534,18 @@ jobs:
         id: embed
         run: cargo run -p mailslot-core --example embed --locked
 
-      - name: Check the core has no UI dependency
+      - name: Build the IPC library and the mailslotd daemon
+        run: cargo build -p mailslot-ipc --bins --locked
+
+      - name: Check the core, IPC and CLI crates have no UI dependency
         id: tree
         run: |
-          if cargo tree -p mailslot-core --all-features --locked | grep -E '(^|[ │├└─]+)(gtk4|glib|gio|libadwaita)[ -]'; then
-            echo "mailslot-core depends on a GTK crate" >&2
-            exit 1
-          fi
+          for crate in mailslot-core mailslot-ipc mailslot-cli; do
+            if cargo tree -p "$crate" --all-features --locked | grep -E '(^|[ │├└─]+)(gtk4|glib|gio|libadwaita)[ -]'; then
+              echo "$crate depends on a GTK crate" >&2
+              exit 1
+            fi
+          done
 
       - name: Job summary
         if: always()

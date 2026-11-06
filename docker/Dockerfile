@@ -172,4 +172,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     && chmod 0755 /usr/local/bin/linuxdeploy /usr/local/bin/linuxdeploy-plugin-gtk.sh \
     && chmod -R a+rX /usr/local/rustup /usr/local/cargo
 
+# GTK 4.22 on Ubuntu ships no gtk-4.0 module directory, and the linuxdeploy GTK plugin copies it
+# unconditionally and fails when it is absent.
+RUN mkdir -p /usr/lib/x86_64-linux-gnu/gtk-4.0
+
 WORKDIR /workspace

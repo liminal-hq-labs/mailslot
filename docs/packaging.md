@@ -4,7 +4,7 @@ Mailslot ships as two packages from one workspace: **`mailslot`** (the GTK app, 
 
 | Format | Surface | Built by | Notes |
 |---|---|---|---|
-| Flatpak | GUI and CLI | `make flatpak` | `org.gnome.Platform//51`, in the flatpak-github-actions image with `--privileged`. Covers older distributions |
+| Flatpak | GUI, CLI and `mailslotd` | `make flatpak` | `org.gnome.Platform//51`, in the flatpak-github-actions image with `--privileged`. Covers older distributions |
 | AppImage | GUI and CLI | `make appimage` | linuxdeploy with the GTK plugin, bundles GTK 4 and libadwaita. `Mailslot.AppImage mailslot-cli …` runs the CLI. Embeds `gh-releases-zsync` update information |
 | deb | `mailslot`, `mailslot-cli` | `make deb` | Built on Ubuntu 26.04 (GTK 4.22, libadwaita 1.9). Ubuntu 24.04 is not supported |
 | rpm | `mailslot`, `mailslot-cli` | `make rpm` | Built on Fedora |
@@ -14,7 +14,7 @@ Mailslot ships as two packages from one workspace: **`mailslot`** (the GTK app, 
 
 `make packages` builds deb, rpm, AppImage and the tarball into `dist/` with a `SHA256SUMS` file. The release workflow attaches everything to the GitHub release.
 
-The `mailslot` package ships both binaries and declares `Provides`, `Conflicts` and `Replaces` for `mailslot-cli`, so the two never fight over `/usr/bin/mailslot-cli`.
+Every package that ships the CLI also ships the `mailslotd` daemon, and the deb, rpm, Arch packages and the tarball include its systemd user unit (`data/mailslotd.service`, installed to `/usr/lib/systemd/user/`). The Flatpak and AppImage carry the binary but no unit. The `mailslot` package ships all three binaries and declares `Provides`, `Conflicts` and `Replaces` for `mailslot-cli`, so the two never fight over `/usr/bin/mailslot-cli`.
 
 ## Verification
 
@@ -22,6 +22,10 @@ The `mailslot` package ships both binaries and declares `Provides`, `Conflicts` 
 - `scripts/test-package.sh deb|rpm` installs the package in a clean container of the target distribution and runs `mailslot --version` and `mailslot-cli --version`.
 - `scripts/test-package.sh appimage` runs `--appimage-extract-and-run mailslot --version`, launches the app under headless weston, and validates the bundled metainfo.
 - `scripts/test-package.sh cli-tarball` unpacks the tarball and runs `mailslot-cli --version` on a distribution without GTK.
+
+## Debian metadata
+
+`packaging/deb/` holds a DEP-5 `copyright` (the Apache license text is the one in `/usr/share/common-licenses`, so it is referenced, not shipped) and one `changelog-<package>` per package. lintian runs with `--fail-on error`, and rejects a short description that starts with the package name. Keep `description` in each crate's manifest starting with a verb or noun phrase ("Private file drop for the GNOME desktop: …"), not "Mailslot, …".
 
 ## Cargo metadata
 
@@ -32,9 +36,10 @@ The package scripts read `[package.metadata.deb]` and `[package.metadata.generat
 ```toml
 [package.metadata.deb]
 name = "mailslot"
+changelog = "../../packaging/deb/changelog-mailslot"
 maintainer = "Scott Morris <scott.moris@gmail.com>"
 copyright = "2026, Liminal HQ, Scott Morris"
-license-file = ["../../LICENSE-MIT", "0"]
+license-file = ["../../packaging/deb/copyright", "0"]
 section = "net"
 priority = "optional"
 depends = "$auto, libgtk-4-1 (>= 4.20), libadwaita-1-0 (>= 1.8)"
@@ -43,16 +48,18 @@ provides = "mailslot-cli"
 conflicts = "mailslot-cli"
 replaces = "mailslot-cli"
 extended-description = """\
-Mailslot receives files through a private link. Start sharing, hand out the \
-link, and files sent to it land in a folder with a SHA-256 checksum. Nothing \
-is ever served back.
- .
-It also sends: the Send page and the mailslot-cli command push files to \
+Receive files through a private link. Start sharing, hand out the link, and \
+files sent to it land in a folder with a SHA-256 checksum. Nothing is ever \
+served back.
+
+It also sends. The Send page and the mailslot-cli command push files to \
 another Mailslot, resume interrupted transfers and skip files the other side \
-already has. Includes the mailslot-cli command."""
+already has. This package includes the mailslot-cli command."""
 assets = [
 	["target/release/mailslot", "usr/bin/", "755"],
 	["target/release/mailslot-cli", "usr/bin/", "755"],
+	["target/release/mailslotd", "usr/bin/", "755"],
+	["../../data/mailslotd.service", "usr/lib/systemd/user/", "644"],
 	["../../data/ca.liminalhq.mailslot.desktop", "usr/share/applications/", "644"],
 	["../../data/ca.liminalhq.mailslot.metainfo.xml", "usr/share/metainfo/", "644"],
 	["../../data/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
@@ -61,7 +68,6 @@ assets = [
 	["../../data/completions/mailslot-cli.bash", "usr/share/bash-completion/completions/mailslot-cli", "644"],
 	["../../data/completions/mailslot-cli.fish", "usr/share/fish/vendor_completions.d/mailslot-cli.fish", "644"],
 	["../../data/completions/_mailslot-cli", "usr/share/zsh/vendor-completions/_mailslot-cli", "644"],
-	["../../LICENSE-APACHE", "usr/share/doc/mailslot/", "644"],
 	["../../LICENSE-MIT", "usr/share/doc/mailslot/", "644"],
 	["../../README.md", "usr/share/doc/mailslot/", "644"],
 ]
@@ -83,6 +89,8 @@ obsoletes = { mailslot-cli = "< 0.1.0" }
 assets = [
 	{ source = "target/release/mailslot", dest = "/usr/bin/mailslot", mode = "755" },
 	{ source = "target/release/mailslot-cli", dest = "/usr/bin/mailslot-cli", mode = "755" },
+	{ source = "target/release/mailslotd", dest = "/usr/bin/mailslotd", mode = "755" },
+	{ source = "../../data/mailslotd.service", dest = "/usr/lib/systemd/user/mailslotd.service", mode = "644" },
 	{ source = "../../data/ca.liminalhq.mailslot.desktop", dest = "/usr/share/applications/ca.liminalhq.mailslot.desktop", mode = "644" },
 	{ source = "../../data/ca.liminalhq.mailslot.metainfo.xml", dest = "/usr/share/metainfo/ca.liminalhq.mailslot.metainfo.xml", mode = "644" },
 	{ source = "../../data/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg", dest = "/usr/share/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg", mode = "644" },
@@ -102,23 +110,25 @@ assets = [
 ```toml
 [package.metadata.deb]
 name = "mailslot-cli"
+changelog = "../../packaging/deb/changelog-mailslot-cli"
 maintainer = "Scott Morris <scott.moris@gmail.com>"
 copyright = "2026, Liminal HQ, Scott Morris"
-license-file = ["../../LICENSE-MIT", "0"]
+license-file = ["../../packaging/deb/copyright", "0"]
 section = "net"
 priority = "optional"
 depends = "$auto"
 extended-description = """\
-mailslot-cli sends files to a Mailslot and runs a headless receiver, with no \
-GTK dependency. Uploads resume after a dropped connection, retry with backoff \
-and skip files the receiver already has."""
+Send files to a Mailslot and run a headless receiver, with no GTK \
+dependency. Uploads resume after a dropped connection, retry with backoff and \
+skip files the receiver already has."""
 assets = [
 	["target/release/mailslot-cli", "usr/bin/", "755"],
+	["target/release/mailslotd", "usr/bin/", "755"],
+	["../../data/mailslotd.service", "usr/lib/systemd/user/", "644"],
 	["../../data/man/mailslot-cli.1", "usr/share/man/man1/", "644"],
 	["../../data/completions/mailslot-cli.bash", "usr/share/bash-completion/completions/mailslot-cli", "644"],
 	["../../data/completions/mailslot-cli.fish", "usr/share/fish/vendor_completions.d/mailslot-cli.fish", "644"],
 	["../../data/completions/_mailslot-cli", "usr/share/zsh/vendor-completions/_mailslot-cli", "644"],
-	["../../LICENSE-APACHE", "usr/share/doc/mailslot-cli/", "644"],
 	["../../LICENSE-MIT", "usr/share/doc/mailslot-cli/", "644"],
 	["../../README.md", "usr/share/doc/mailslot-cli/", "644"],
 ]
@@ -135,6 +145,8 @@ release = "1"
 auto-req = "auto"
 assets = [
 	{ source = "target/release/mailslot-cli", dest = "/usr/bin/mailslot-cli", mode = "755" },
+	{ source = "target/release/mailslotd", dest = "/usr/bin/mailslotd", mode = "755" },
+	{ source = "../../data/mailslotd.service", dest = "/usr/lib/systemd/user/mailslotd.service", mode = "644" },
 	{ source = "../../data/man/mailslot-cli.1", dest = "/usr/share/man/man1/mailslot-cli.1", mode = "644", doc = true },
 	{ source = "../../data/completions/mailslot-cli.bash", dest = "/usr/share/bash-completion/completions/mailslot-cli", mode = "644" },
 	{ source = "../../data/completions/mailslot-cli.fish", dest = "/usr/share/fish/vendor_completions.d/mailslot-cli.fish", mode = "644" },
