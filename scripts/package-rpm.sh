@@ -4,21 +4,17 @@
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
+# `version` and `ipc_pkg` come from package-common.sh.
+# shellcheck disable=SC2154
 set -euo pipefail
 
-cd "$(dirname "${BASH_SOURCE[0]}")/.."
-
-version="$(sed -n "s/^version *= *\"\\(.*\\)\"/\\1/p" Cargo.toml | head -n1)"
-[ -n "$version" ] || {
-	echo "could not read the workspace version from Cargo.toml" >&2
-	exit 1
-}
-mkdir -p dist
+# shellcheck source=/dev/null
+. "$(dirname "${BASH_SOURCE[0]}")/package-common.sh"
 
 # Runs inside the pkg-rpm image (Fedora). The metadata is `[package.metadata.generate-rpm]` in each
 # crate's Cargo.toml; see docs/packaging.md.
 
-cargo build --release --locked -p mailslot-gtk -p mailslot-cli
+cargo build --release --locked -p mailslot-gtk -p mailslot-cli "${ipc_pkg[@]}"
 cargo generate-rpm -p crates/mailslot-gtk -o dist/
 cargo generate-rpm -p crates/mailslot-cli -o dist/
 

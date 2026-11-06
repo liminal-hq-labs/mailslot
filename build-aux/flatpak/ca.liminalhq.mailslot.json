@@ -25,9 +25,10 @@
 			"name": "mailslot",
 			"buildsystem": "simple",
 			"build-commands": [
-				"cargo --offline build --release --locked -p mailslot-gtk -p mailslot-cli",
+				"cargo --offline build --release --locked --workspace",
 				"install -Dm755 target/release/mailslot /app/bin/mailslot",
 				"install -Dm755 target/release/mailslot-cli /app/bin/mailslot-cli",
+				"if [ -f target/release/mailslotd ]; then install -Dm755 target/release/mailslotd /app/bin/mailslotd; fi",
 				"install -Dm644 data/ca.liminalhq.mailslot.desktop /app/share/applications/ca.liminalhq.mailslot.desktop",
 				"install -Dm644 data/ca.liminalhq.mailslot.metainfo.xml /app/share/metainfo/ca.liminalhq.mailslot.metainfo.xml",
 				"install -Dm644 data/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg /app/share/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg",

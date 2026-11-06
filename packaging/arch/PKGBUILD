@@ -29,7 +29,7 @@ build() {
 	cd "$pkgbase-$pkgver"
 	export RUSTUP_TOOLCHAIN=stable
 	export CARGO_TARGET_DIR=target
-	cargo build --frozen --release -p mailslot-gtk -p mailslot-cli
+	cargo build --frozen --release --workspace
 }
 
 check() {
@@ -41,6 +41,10 @@ check() {
 
 _install_cli() {
 	install -Dm755 target/release/mailslot-cli -t "$pkgdir/usr/bin/"
+	if [ -f target/release/mailslotd ]; then
+		install -Dm755 target/release/mailslotd -t "$pkgdir/usr/bin/"
+		install -Dm644 data/mailslotd.service -t "$pkgdir/usr/lib/systemd/user/"
+	fi
 	install -Dm644 data/man/mailslot-cli.1 -t "$pkgdir/usr/share/man/man1/"
 	install -Dm644 data/completions/mailslot-cli.bash "$pkgdir/usr/share/bash-completion/completions/mailslot-cli"
 	install -Dm644 data/completions/mailslot-cli.fish "$pkgdir/usr/share/fish/vendor_completions.d/mailslot-cli.fish"
