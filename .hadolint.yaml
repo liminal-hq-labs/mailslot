@@ -1,0 +1,17 @@
+# Hadolint configuration for docker/Dockerfile.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+# Only fail on hadolint's error severity; warnings are reported but do not block.
+failure-threshold: error
+
+ignored:
+  # Package versions come from the pinned Fedora release and the weekly rebuild, not from
+  # per-package pins that a repository would drop.
+  - DL3041
+  # Every stage inherits `SHELL ["/bin/bash", "-o", "pipefail", "-c"]` from the first, which
+  # hadolint's per-stage analysis cannot see.
+  - DL4006
+  # `cd` in one RUN chain is deliberate for download-and-extract steps.
+  - DL3003

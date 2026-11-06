@@ -297,14 +297,14 @@ Mailslot can ask the router to forward the sharing port so the link works from t
 
 The first release is manual send with dedupe and resume. Sync grows from the same protocol.
 
-**Version 1**
+### Version 1
 
 - `mailslot-cli watch DIR LINK` and a GUI Outbox folder: push sync from a watched folder using inotify, content-hash dedupe, resume after network drops and a send queue that survives restarts.
 - Pairing by QR code or `mailslot://` link, plus opt-in mDNS discovery on the LAN so a phone or laptop finds the app without typing.
 - A per-sender subfolder option on the server, keyed by link label, and a history view of both sent and received transfers.
 - `mailslot-ipc`: a local JSON-RPC API (Unix socket or named pipe) and a headless `mailslotd`, so non-Rust interfaces drive the same engine.
 
-**Later**
+### Later
 
 - A separate opt-in read-only token for `pull` (list and fetch), enabling one-way pull sync and then two-way sync with conflict rules.
 - Shared clipboard and text snippets, and "send to my other machine".

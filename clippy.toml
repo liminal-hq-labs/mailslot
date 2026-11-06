@@ -1,0 +1,37 @@
+# Clippy configuration: keeps blocking calls out of async code.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+# Mailslot's I/O is async on tokio (see AGENTS.md, "Async rules"). These calls block a worker
+# thread, so clippy rejects them. `allow-invalid` keeps the list valid for crates that do not
+# depend on reqwest. Use the `tokio::fs` or async equivalent. If a blocking call is genuinely
+# needed (for example in `main` before the runtime exists), allow it at that call site with a
+# comment saying why.
+#
+# `clippy::await_holding_lock` is a default warning, so `-D warnings` already denies it.
+
+disallowed-methods = [
+  { path = "std::fs::read", reason = "use tokio::fs::read", allow-invalid = true },
+  { path = "std::fs::read_to_string", reason = "use tokio::fs::read_to_string", allow-invalid = true },
+  { path = "std::fs::write", reason = "use tokio::fs::write", allow-invalid = true },
+  { path = "std::fs::copy", reason = "use tokio::fs::copy", allow-invalid = true },
+  { path = "std::fs::rename", reason = "use tokio::fs::rename", allow-invalid = true },
+  { path = "std::fs::hard_link", reason = "use tokio::fs::hard_link", allow-invalid = true },
+  { path = "std::fs::remove_file", reason = "use tokio::fs::remove_file", allow-invalid = true },
+  { path = "std::fs::remove_dir", reason = "use tokio::fs::remove_dir", allow-invalid = true },
+  { path = "std::fs::remove_dir_all", reason = "use tokio::fs::remove_dir_all", allow-invalid = true },
+  { path = "std::fs::create_dir", reason = "use tokio::fs::create_dir", allow-invalid = true },
+  { path = "std::fs::create_dir_all", reason = "use tokio::fs::create_dir_all", allow-invalid = true },
+  { path = "std::fs::metadata", reason = "use tokio::fs::metadata", allow-invalid = true },
+  { path = "std::fs::symlink_metadata", reason = "use tokio::fs::symlink_metadata", allow-invalid = true },
+  { path = "std::fs::read_dir", reason = "use tokio::fs::read_dir", allow-invalid = true },
+  { path = "std::fs::canonicalize", reason = "use tokio::fs::canonicalize", allow-invalid = true },
+  { path = "std::fs::File::open", reason = "use tokio::fs::File::open", allow-invalid = true },
+  { path = "std::fs::File::create", reason = "use tokio::fs::File::create", allow-invalid = true },
+  { path = "std::fs::OpenOptions::open", reason = "use tokio::fs::OpenOptions", allow-invalid = true },
+  { path = "std::thread::sleep", reason = "use tokio::time::sleep", allow-invalid = true },
+  { path = "reqwest::blocking::get", reason = "use the async reqwest client", allow-invalid = true },
+  { path = "reqwest::blocking::Client::new", reason = "use the async reqwest client", allow-invalid = true },
+  { path = "reqwest::blocking::ClientBuilder::build", reason = "use the async reqwest client", allow-invalid = true },
+]

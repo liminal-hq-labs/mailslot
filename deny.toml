@@ -1,0 +1,42 @@
+# Licence and advisory policy for every crate Mailslot depends on.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+# Mailslot is `Apache-2.0 OR MIT`. Everything linked in must be under a permissive licence, apart
+# from MPL-2.0 below, so a new dependency under any other copyleft licence fails the check and
+# has to be looked at by a person.
+
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+
+[licenses]
+confidence-threshold = 0.9
+allow = [
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "MIT",
+  "MIT-0",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "Unicode-3.0",
+  "CC0-1.0",
+  "0BSD",
+  "CDLA-Permissive-2.0",
+  # File-level copyleft: fine when a crate is used unmodified.
+  "MPL-2.0",
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
