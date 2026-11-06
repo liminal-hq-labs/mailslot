@@ -1,0 +1,5 @@
+[package]
+name = "mailslot-gtk"
+version.workspace = true
+edition.workspace = true
+[dependencies]

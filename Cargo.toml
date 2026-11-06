@@ -1,0 +1,50 @@
+[workspace]
+resolver = "3"
+members = ["crates/mailslot-core", "crates/mailslot-cli", "crates/mailslot-gtk"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/liminal-hq/mailslot"
+homepage = "https://github.com/liminal-hq/mailslot"
+authors = ["Liminal HQ, Scott Morris"]
+
+[workspace.dependencies]
+mailslot-core = { path = "crates/mailslot-core", version = "0.1.0", default-features = false }
+anyhow = "1"
+async-channel = "2"
+axum = { version = "0.8", default-features = false, features = ["http1", "http2", "tokio"] }
+base64 = "0.22"
+bytes = "1"
+clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
+clap_mangen = "0.3"
+directories = "6"
+futures-util = "0.3"
+getrandom = "0.4"
+hex = "0.4"
+http-body-util = "0.1"
+hyper = { version = "1", features = ["http1", "http2", "server"] }
+hyper-util = { version = "0.1", features = ["tokio", "server-auto", "service"] }
+local-ip-address = "0.6"
+percent-encoding = "2"
+proptest = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.11"
+subtle = "2"
+thiserror = "2"
+time = { version = "0.3", features = ["formatting", "parsing", "serde", "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "io-util", "net", "sync", "time", "signal"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tokio-util = { version = "0.7", features = ["io", "rt"] }
+toml = "0.9"
+tower = { version = "0.5", features = ["util"] }
+tracing = "0.1"
+unicode-normalization = "0.1"
+
+[profile.release]
+strip = true
+lto = "thin"
