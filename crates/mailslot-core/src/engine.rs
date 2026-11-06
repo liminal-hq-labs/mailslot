@@ -395,6 +395,26 @@ impl Engine {
 		self.inner.history.clone()
 	}
 
+	/// Loads the history, oldest first. Runs on the engine's runtime, so it can be awaited
+	/// from any executor.
+	pub async fn load_history(&self) -> Result<Vec<HistoryEntry>> {
+		let history = self.inner.history.clone();
+		self.run(async move { history.load().await }).await
+	}
+
+	/// Deletes the history file.
+	pub async fn clear_history(&self) -> Result<()> {
+		let history = self.inner.history.clone();
+		self.run(async move { history.clear().await }).await
+	}
+
+	/// Drops history entries older than the configured number of days.
+	pub async fn prune_history(&self) -> Result<usize> {
+		let history = self.inner.history.clone();
+		let days = self.config().notifications.history_days;
+		self.run(async move { history.prune(days).await }).await
+	}
+
 	/// Inputs for the copy-snippet menu, from the first URL in the current state.
 	pub fn snippet_context(&self) -> Option<SnippetContext> {
 		let st = self.state();
@@ -532,6 +552,23 @@ impl Engine {
 	pub async fn send(&self, req: SendRequest) -> Result<Vec<SendId>> {
 		let inner = self.inner.clone();
 		self.run(async move { send_inner(inner, req).await }).await
+	}
+
+	/// Asks a link's server for its limits and whether it is accepting files.
+	#[cfg(feature = "client")]
+	pub async fn check_link(&self, link: MailslotLink) -> Result<crate::client::Health> {
+		self.run(async move {
+			crate::client::Client::new(
+				link,
+				crate::client::ClientOptions {
+					retries: 0,
+					..Default::default()
+				},
+			)?
+			.health()
+			.await
+		})
+		.await
 	}
 
 	/// Cancels a running transfer.

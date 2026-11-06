@@ -1,5 +1,54 @@
 [package]
 name = "mailslot-gtk"
+description = "Mailslot, a private file drop for the GNOME desktop: share a secret link, receive files, send files."
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+publish = false
+keywords = ["gtk4", "libadwaita", "file-transfer", "upload"]
+categories = ["gui", "network-programming"]
+
+[lib]
+name = "mailslot_gtk"
+path = "src/lib.rs"
+
+[[bin]]
+name = "mailslot"
+path = "src/main.rs"
+
 [dependencies]
+mailslot-core = { workspace = true, features = ["server", "client", "portmap", "tls"] }
+adw = { package = "libadwaita", version = "0.9", features = ["v1_8"] }
+gtk = { package = "gtk4", version = "0.11", features = ["v4_20"] }
+gettext-rs = { version = "0.8", default-features = false, features = ["gettext-system"] }
+futures-util.workspace = true
+qrcode = { version = "0.14", default-features = false }
+tokio.workspace = true
+tracing.workspace = true
+
+[build-dependencies]
+glib-build-tools = "0.22"
+
+[dev-dependencies]
+tempfile = "3"
+
+[package.metadata.deb]
+name = "mailslot"
+section = "net"
+priority = "optional"
+extended-description = "Mailslot gives you a private link anyone can use to send you files from a browser or the command line. Files land in a folder you choose, with a SHA-256 checksum, and nothing is ever served back."
+assets = [
+	["target/release/mailslot", "usr/bin/", "755"],
+	["../../target/release/mailslot-cli", "usr/bin/", "755"],
+]
+
+[package.metadata.generate-rpm]
+name = "mailslot"
+summary = "Private file drop for the GNOME desktop"
+assets = [
+	{ source = "target/release/mailslot", dest = "/usr/bin/mailslot", mode = "755" },
+]
