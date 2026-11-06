@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Mailslot architecture diagram: who talks to whom, from senders through the router to the engine and disk.
+	Light by default, dark through prefers-color-scheme, a complete still frame under prefers-reduced-motion.
+
+	(c) Copyright 2026 Liminal HQ, Scott Morris
+	SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-labelledby="title desc" data-loop="10">
+	<title id="title">Mailslot system overview</title>
+	<desc id="desc">Senders on the LAN (a phone that scanned the QR code, a browser, mailslot-cli) upload straight to the HTTP server on this computer. Senders on the internet (curl, another Mailslot app) reach it through the router, which forwards the port while the engine holds a lease. The server streams each upload to a .part file and renames it into the destination folder. Inside the engine sit the server, mDNS announcement, port mapping, the event stream and the send client. The frontends (the GTK app, mailslot-cli serve and mailslotd) send commands to the engine and receive events and state. Animated: an upload from a browser and one from curl travel to disk, and an event goes up to the frontends after each.</desc>
+
+	<style>
+		.ui { font-family: ui-sans-serif, system-ui, sans-serif; }
+		.mono { font-family: ui-monospace, monospace; }
+		.bg-a { stop-color: #ffffff; }
+		.bg-b { stop-color: #eaf0fa; }
+		.ink { fill: #161c2d; }
+		.muted { fill: #4b566e; }
+		.red-ink { fill: #b81d32; }
+		.white { fill: #ffffff; }
+		.panel { fill: #f5f7fc; stroke: #d3dbea; }
+		.card { fill: #ffffff; stroke: #c3cce0; }
+		.engine { fill: #fdf0f2; stroke: #eaa6af; }
+		.wire { fill: none; stroke: #7d89a3; stroke-width: 1.6; }
+		.soft { stroke-dasharray: 4 4; }
+		.arrow { fill: #7d89a3; }
+		.ok { fill: none; stroke: #23883a; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+		.static { display: none; }
+		@media (prefers-color-scheme: dark) {
+			.bg-a { stop-color: #0d1220; }
+			.bg-b { stop-color: #161d33; }
+			.ink { fill: #f4f6fb; }
+			.muted { fill: #b8c2d8; }
+			.red-ink { fill: #ff8a96; }
+			.panel { fill: #131a2c; stroke: #2a3452; }
+			.card { fill: #1c243a; stroke: #36425f; }
+			.engine { fill: #2a1622; stroke: #7a2e3c; }
+			.wire { stroke: #8b97b1; }
+			.arrow { fill: #8b97b1; }
+			.ok { stroke: #4ad06a; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			.motion { display: none; }
+			.static { display: inline; }
+		}
+	</style>
+
+	<defs>
+		<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+			<stop class="bg-a" offset="0"/>
+			<stop class="bg-b" offset="1"/>
+		</linearGradient>
+		<linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#d6334a"/>
+			<stop offset="1" stop-color="#a8172c"/>
+		</linearGradient>
+		<linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#2a6fe0"/>
+			<stop offset="1" stop-color="#1a52b8"/>
+		</linearGradient>
+		<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+			<path class="arrow" d="M0 1 L10 5 L0 9 z"/>
+		</marker>
+		<path id="p-browser" d="M212 214 C 320 214, 330 320, 434 320"/>
+		<path id="p-curl" d="M212 418 C 232 418, 232 428, 250 428"/>
+		<path id="p-router" d="M320 400 C 320 360, 360 360, 434 360"/>
+		<path id="p-disk" d="M612 336 H 786"/>
+		<path id="p-events" d="M540 292 V 280 H 686 V 114"/>
+		<path id="p-commands" d="M520 114 V 150"/>
+		<g id="file">
+			<rect x="-6" y="-8" width="12" height="16" rx="2" fill="url(#blue)"/>
+			<path d="M-3 -3 H3 M-3 1 H3" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round"/>
+		</g>
+	</defs>
+
+	<rect data-bg="" width="960" height="540" rx="16" fill="url(#bg)"/>
+
+	<!-- Senders -->
+	<rect id="senders" data-box="" class="panel" x="16" y="16" width="212" height="508" rx="14"/>
+	<text data-for="senders" class="ui muted" x="32" y="44" font-size="11" font-weight="700" letter-spacing="1">SENDERS</text>
+	<text data-for="senders" class="ui muted" x="32" y="110" font-size="11">On the LAN</text>
+	<rect id="s-phone" data-box="" class="card" x="32" y="120" width="180" height="56" rx="10"/>
+	<text data-for="s-phone" class="ui ink" x="48" y="144" font-size="13" font-weight="700">Phone</text>
+	<text data-for="s-phone" class="ui muted" x="48" y="162" font-size="11">scans the QR code</text>
+	<rect id="s-browser" data-box="" class="card" x="32" y="186" width="180" height="56" rx="10"/>
+	<text data-for="s-browser" class="ui ink" x="48" y="210" font-size="13" font-weight="700">Browser</text>
+	<text data-for="s-browser" class="mono muted" x="48" y="228" font-size="11">drop page, PUT</text>
+	<rect id="s-cli" data-box="" class="card" x="32" y="252" width="180" height="56" rx="10"/>
+	<text data-for="s-cli" class="ui ink" x="48" y="276" font-size="13" font-weight="700">mailslot-cli</text>
+	<text data-for="s-cli" class="mono muted" x="48" y="294" font-size="11">send, watch</text>
+	<text data-for="senders" class="ui muted" x="32" y="380" font-size="11">On the internet</text>
+	<rect id="s-curl" data-box="" class="card" x="32" y="390" width="180" height="56" rx="10"/>
+	<text data-for="s-curl" class="mono ink" x="48" y="414" font-size="13" font-weight="700">curl -T</text>
+	<text data-for="s-curl" class="mono muted" x="48" y="432" font-size="11">raw body PUT</text>
+	<rect id="s-app" data-box="" class="card" x="32" y="456" width="180" height="56" rx="10"/>
+	<text data-for="s-app" class="ui ink" x="48" y="480" font-size="13" font-weight="700">Mailslot app</text>
+	<text data-for="s-app" class="mono muted" x="48" y="498" font-size="11">Send page</text>
+
+	<!-- Router -->
+	<rect id="router" data-box="" class="card" x="252" y="400" width="136" height="72" rx="10"/>
+	<text data-for="router" class="ui ink" x="268" y="422" font-size="13" font-weight="700">Router</text>
+	<text data-for="router" class="ui muted" x="268" y="440" font-size="11">port forward</text>
+	<text data-for="router" class="ui muted" x="268" y="456" font-size="11">lease, 1 h max</text>
+
+	<!-- This computer -->
+	<rect id="host" data-box="" class="panel" x="404" y="16" width="540" height="508" rx="14"/>
+	<text data-for="host" class="ui muted" x="420" y="44" font-size="11" font-weight="700" letter-spacing="1">THIS COMPUTER</text>
+
+	<rect id="f-gtk" data-box="" class="card" x="420" y="56" width="160" height="56" rx="10"/>
+	<text data-for="f-gtk" class="ui ink" x="436" y="80" font-size="13" font-weight="700">mailslot</text>
+	<text data-for="f-gtk" class="ui muted" x="436" y="98" font-size="11">GTK app</text>
+	<rect id="f-cli" data-box="" class="card" x="592" y="56" width="160" height="56" rx="10"/>
+	<text data-for="f-cli" class="ui ink" x="608" y="80" font-size="13" font-weight="700">mailslot-cli</text>
+	<text data-for="f-cli" class="ui muted" x="608" y="98" font-size="11">serve</text>
+	<rect id="f-daemon" data-box="" class="card" x="764" y="56" width="164" height="56" rx="10"/>
+	<text data-for="f-daemon" class="ui ink" x="780" y="80" font-size="13" font-weight="700">mailslotd</text>
+	<text data-for="f-daemon" class="ui muted" x="780" y="98" font-size="11">JSON-RPC daemon</text>
+
+	<rect id="engine" data-box="" class="engine" x="420" y="152" width="340" height="360" rx="14"/>
+	<text data-for="engine" class="ui red-ink" x="436" y="178" font-size="13" font-weight="700">Engine</text>
+	<text data-for="engine" class="mono red-ink" x="492" y="178" font-size="11">mailslot-core</text>
+
+	<rect id="mdns" data-box="" class="card" x="436" y="196" width="176" height="72" rx="10"/>
+	<text data-for="mdns" class="ui ink" x="452" y="222" font-size="13" font-weight="700">mDNS</text>
+	<text data-for="mdns" class="mono muted" x="452" y="240" font-size="11">_mailslot._tcp</text>
+	<text data-for="mdns" class="ui muted" x="452" y="256" font-size="11">opt-in, no token</text>
+
+	<rect id="server" data-box="" x="436" y="292" width="176" height="88" rx="10" fill="url(#blue)"/>
+	<text data-for="server" class="ui white" x="452" y="318" font-size="13" font-weight="700">HTTP server</text>
+	<text data-for="server" class="mono white" x="452" y="338" font-size="11">PUT /&lt;token&gt;/name</text>
+	<text data-for="server" class="ui white" x="452" y="358" font-size="11">axum, hyper, rustls</text>
+
+	<rect id="portmap" data-box="" class="card" x="436" y="404" width="176" height="88" rx="10"/>
+	<text data-for="portmap" class="ui ink" x="452" y="430" font-size="13" font-weight="700">Port mapping</text>
+	<text data-for="portmap" class="ui muted" x="452" y="450" font-size="11">UPnP-IGD, PCP,</text>
+	<text data-for="portmap" class="ui muted" x="452" y="466" font-size="11">NAT-PMP, renewed</text>
+
+	<rect id="events" data-box="" class="card" x="628" y="196" width="116" height="72" rx="10"/>
+	<text data-for="events" class="ui ink" x="644" y="222" font-size="13" font-weight="700">Events</text>
+	<text data-for="events" class="ui muted" x="644" y="240" font-size="11">typed stream</text>
+	<text data-for="events" class="mono muted" x="644" y="256" font-size="11">+ state()</text>
+
+	<rect id="client" data-box="" class="card" x="628" y="404" width="116" height="88" rx="10"/>
+	<text data-for="client" class="ui ink" x="644" y="430" font-size="13" font-weight="700">Client</text>
+	<text data-for="client" class="ui muted" x="644" y="450" font-size="11">send, resume,</text>
+	<text data-for="client" class="ui muted" x="644" y="466" font-size="11">dedupe, retry</text>
+
+	<!-- Disk -->
+	<rect id="disk" data-box="" class="card" x="776" y="152" width="152" height="360" rx="14"/>
+	<text data-for="disk" class="ui ink" x="792" y="178" font-size="13" font-weight="700">Disk</text>
+	<text data-for="disk" class="mono muted" x="792" y="200" font-size="11">Downloads/Mailslot</text>
+	<rect id="row1" data-box="" class="panel" x="788" y="212" width="128" height="28" rx="6"/>
+	<text data-for="row1" class="mono ink" x="798" y="230" font-size="11">notes.txt</text>
+	<path class="ok" d="M892 226 l3.5 3.5 7 -7"/>
+	<text data-for="disk" class="ui muted" x="792" y="420" font-size="11">XDG config, data</text>
+	<rect id="cfg" data-box="" class="panel" x="788" y="432" width="128" height="28" rx="6"/>
+	<text data-for="cfg" class="mono ink" x="798" y="450" font-size="11">config.toml</text>
+	<rect id="hist" data-box="" class="panel" x="788" y="468" width="128" height="28" rx="6"/>
+	<text data-for="hist" class="mono ink" x="798" y="486" font-size="11">history.jsonl</text>
+
+	<!-- Wires -->
+	<path data-line="" class="wire" d="M212 148 C 330 148, 320 300, 434 300" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-browser" class="wire" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M212 280 C 320 280, 330 340, 434 340" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-curl" class="wire" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M212 484 C 236 484, 232 448, 250 448" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-router" class="wire" marker-end="url(#arr)"/>
+	<path data-line="" class="wire soft" d="M434 448 H 390"/>
+	<use data-line="" href="#p-disk" class="wire" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M540 292 V 280 H 686 V 270" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M686 196 V 114" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-commands" class="wire" marker-end="url(#arr)"/>
+	<text data-for="host" class="ui muted" x="528" y="138" font-size="11">commands</text>
+	<text data-for="host" class="ui muted" x="678" y="138" font-size="11" text-anchor="end">events, state</text>
+
+	<!-- Motion: a browser upload, then a curl upload through the router -->
+	<g class="motion">
+		<path class="wire soft" d="M434 448 H 390" stroke="#2f7bea" stroke-width="2.4" opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.82;0.86;0.9;1" values="0;0;1;0;0"/>
+		</path>
+		<rect class="wire" x="436" y="196" width="176" height="72" rx="10" stroke="#2f7bea" stroke-width="2" opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.74;0.77;0.84;1" values="0;0;0.9;0;0"/>
+		</rect>
+
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.005;0.01;0.04;0.045;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.01;0.04;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-commands"/></animateMotion>
+			<circle r="4" fill="#d6334a"/>
+		</g>
+
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.04;0.05;0.17;0.18;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.05;0.18;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-browser"/></animateMotion>
+			<use href="#file"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.19;0.2;0.27;0.28;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.2;0.28;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-disk"/></animateMotion>
+			<use href="#file"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.2;0.22;0.3;0.31;1" values="0;0;1;1;0;0"/>
+			<rect id="part1" data-box="" class="panel" x="788" y="248" width="128" height="28" rx="6"/>
+			<text data-for="part1" class="mono muted" x="798" y="266" font-size="11">… .part</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.315;0.335;0.93;0.96;1" values="0;0;1;1;0;0"/>
+			<rect id="row2m" data-box="" class="panel" x="788" y="248" width="128" height="28" rx="6"/>
+			<text data-for="row2m" class="mono ink" x="798" y="266" font-size="11">photo.jpg</text>
+			<path class="ok" d="M892 262 l3.5 3.5 7 -7"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.31;0.32;0.38;0.39;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.32;0.39;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-events"/></animateMotion>
+			<circle r="4" fill="#d6334a"/>
+		</g>
+
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.36;0.37;0.42;0.43;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.37;0.43;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-curl"/></animateMotion>
+			<use href="#file"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.44;0.45;0.54;0.55;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.45;0.55;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-router"/></animateMotion>
+			<use href="#file"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.56;0.57;0.64;0.65;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.57;0.65;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-disk"/></animateMotion>
+			<use href="#file"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.57;0.59;0.67;0.68;1" values="0;0;1;1;0;0"/>
+			<rect id="part2" data-box="" class="panel" x="788" y="284" width="128" height="28" rx="6"/>
+			<text data-for="part2" class="mono muted" x="798" y="302" font-size="11">… .part</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.685;0.705;0.93;0.96;1" values="0;0;1;1;0;0"/>
+			<rect id="row3m" data-box="" class="panel" x="788" y="284" width="128" height="28" rx="6"/>
+			<text data-for="row3m" class="mono ink" x="798" y="302" font-size="11">report.pdf</text>
+			<path class="ok" d="M892 298 l3.5 3.5 7 -7"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.68;0.69;0.75;0.76;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.69;0.76;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-events"/></animateMotion>
+			<circle r="4" fill="#d6334a"/>
+		</g>
+	</g>
+
+	<!-- Still frame for reduced motion: both uploads saved -->
+	<g class="static">
+		<rect id="row2s" data-box="" class="panel" x="788" y="248" width="128" height="28" rx="6"/>
+		<text data-for="row2s" class="mono ink" x="798" y="266" font-size="11">photo.jpg</text>
+		<path class="ok" d="M892 262 l3.5 3.5 7 -7"/>
+		<rect id="row3s" data-box="" class="panel" x="788" y="284" width="128" height="28" rx="6"/>
+		<text data-for="row3s" class="mono ink" x="798" y="302" font-size="11">report.pdf</text>
+		<path class="ok" d="M892 298 l3.5 3.5 7 -7"/>
+	</g>
+</svg>

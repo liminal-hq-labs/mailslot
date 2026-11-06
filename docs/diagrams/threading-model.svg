@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Mailslot architecture diagram: the threading model of the GTK app, the GLib main thread and the tokio runtime.
+	Light by default, dark through prefers-color-scheme, a complete still frame under prefers-reduced-motion.
+
+	(c) Copyright 2026 Liminal HQ, Scott Morris
+	SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="496" viewBox="0 0 960 496" role="img" aria-labelledby="title desc" data-loop="10">
+	<title id="title">Mailslot threading model</title>
+	<desc id="desc">Two lanes. On the GLib main thread: GTK widgets, a glib::spawn_future_local task that awaits engine.start() without blocking, the gio::ListStore of UploadItem objects that rows bind to, and Bridge::run, which polls the engine's EventStream on the main loop. On the tokio runtime (a private two-worker runtime from own_runtime(true)): handle.spawn runs each command and its JoinHandle carries the result back; runtime tasks for the server, uploads, port mapping and sends; the event pump, which updates the snapshot and then emits an Event; and the broadcast sender, 2048 events deep, with one BroadcastStream per subscriber. GObjects never cross between the lanes, only plain data. Animated: a click becomes a start command that crosses to the runtime and returns its result, then events cross back one after another and update the list store and the widgets.</desc>
+
+	<style>
+		.ui { font-family: ui-sans-serif, system-ui, sans-serif; }
+		.mono { font-family: ui-monospace, monospace; }
+		.bg-a { stop-color: #ffffff; }
+		.bg-b { stop-color: #eaf0fa; }
+		.ink { fill: #161c2d; }
+		.muted { fill: #4b566e; }
+		.red-ink { fill: #b81d32; }
+		.white { fill: #ffffff; }
+		.panel { fill: #f5f7fc; stroke: #d3dbea; }
+		.card { fill: #ffffff; stroke: #c3cce0; }
+		.engine { fill: #fdf0f2; stroke: #eaa6af; }
+		.wire { fill: none; stroke: #7d89a3; stroke-width: 1.6; }
+		.soft { stroke-dasharray: 4 4; }
+		.arrow { fill: #7d89a3; }
+		.ring { fill: none; stroke: #2f7bea; stroke-width: 2.2; }
+		.lit { fill: #2f7bea; fill-opacity: 0.16; stroke: #2f7bea; stroke-width: 1.6; }
+		.edge { fill: none; stroke: #d6334a; stroke-width: 1.4; stroke-dasharray: 6 5; }
+		.static { display: none; }
+		@media (prefers-color-scheme: dark) {
+			.bg-a { stop-color: #0d1220; }
+			.bg-b { stop-color: #161d33; }
+			.ink { fill: #f4f6fb; }
+			.muted { fill: #b8c2d8; }
+			.red-ink { fill: #ff8a96; }
+			.panel { fill: #131a2c; stroke: #2a3452; }
+			.card { fill: #1c243a; stroke: #36425f; }
+			.engine { fill: #2a1622; stroke: #7a2e3c; }
+			.wire { stroke: #8b97b1; }
+			.arrow { fill: #8b97b1; }
+			.ring { stroke: #5b9cff; }
+			.lit { fill: #5b9cff; fill-opacity: 0.22; stroke: #5b9cff; }
+			.edge { stroke: #ff6f7d; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			.motion { display: none; }
+			.static { display: inline; }
+		}
+	</style>
+
+	<defs>
+		<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+			<stop class="bg-a" offset="0"/>
+			<stop class="bg-b" offset="1"/>
+		</linearGradient>
+		<linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#d6334a"/>
+			<stop offset="1" stop-color="#a8172c"/>
+		</linearGradient>
+		<linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#2a6fe0"/>
+			<stop offset="1" stop-color="#1a52b8"/>
+		</linearGradient>
+		<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+			<path class="arrow" d="M0 1 L10 5 L0 9 z"/>
+		</marker>
+		<path id="p-click" d="M166 156 V 178"/>
+		<path id="p-cmd" d="M300 206 H 558"/>
+		<path id="p-res" d="M558 236 H 302"/>
+		<path id="p-spawn" d="M690 180 V 158"/>
+		<path id="p-emit" d="M874 156 V 282"/>
+		<path id="p-pump" d="M744 348 V 370"/>
+		<path id="p-event" d="M558 412 H 402"/>
+		<path id="p-apply" d="M216 372 V 350"/>
+		<path id="p-notify" d="M350 284 V 158"/>
+	</defs>
+
+	<rect data-bg="" width="960" height="496" rx="16" fill="url(#bg)"/>
+
+	<text class="ui ink" x="480" y="36" font-size="11" font-weight="700" text-anchor="middle">GObjects never cross; only plain data does</text>
+	<circle cx="38" cy="32" r="4.5" fill="#d6334a"/>
+	<text class="ui muted" x="48" y="36" font-size="11">command and result</text>
+	<circle cx="804" cy="32" r="4.5" fill="#2f7bea"/>
+	<text class="ui muted" x="814" y="36" font-size="11">events</text>
+	<rect id="main" data-box="" class="panel" x="16" y="52" width="400" height="428" rx="14"/>
+	<text data-for="main" class="ui muted" x="32" y="76" font-size="11" font-weight="700" letter-spacing="1">GLIB MAIN THREAD</text>
+	<rect id="rt" data-box="" class="panel" x="544" y="52" width="400" height="428" rx="14"/>
+	<text data-for="rt" class="ui muted" x="560" y="76" font-size="11" font-weight="700" letter-spacing="1">TOKIO RUNTIME</text>
+	<text data-for="rt" class="mono muted" x="928" y="76" font-size="11" text-anchor="end">own_runtime(true), 2 workers</text>
+	<path data-line="" class="edge" d="M480 48 V 484"/>
+	<rect id="w" data-box="" class="card" x="32" y="92" width="368" height="64" rx="10"/>
+	<text data-for="w" class="ui ink" x="48" y="116" font-size="13" font-weight="700">GTK widgets</text>
+	<text data-for="w" class="ui muted" x="48" y="136" font-size="11">buttons, link card, upload rows</text>
+	<rect id="sp" data-box="" class="card" x="32" y="180" width="268" height="80" rx="10"/>
+	<text data-for="sp" class="mono ink" x="48" y="204" font-size="12" font-weight="700">glib::spawn_future_local</text>
+	<text data-for="sp" class="mono muted" x="48" y="224" font-size="11">engine.start().await</text>
+	<text data-for="sp" class="ui muted" x="48" y="240" font-size="11">yields; never blocks the loop</text>
+	<rect id="ls" data-box="" class="card" x="32" y="284" width="368" height="64" rx="10"/>
+	<text data-for="ls" class="mono ink" x="48" y="308" font-size="12" font-weight="700">gio::ListStore&lt;UploadItem&gt;</text>
+	<text data-for="ls" class="ui muted" x="48" y="328" font-size="11">UploadItem GObjects; rows bind to them</text>
+	<rect id="br" data-box="" class="card" x="32" y="372" width="368" height="80" rx="10"/>
+	<text data-for="br" class="mono ink" x="48" y="396" font-size="12" font-weight="700">Bridge::run</text>
+	<text data-for="br" class="ui muted" x="48" y="416" font-size="11">polls the EventStream on the main</text>
+	<text data-for="br" class="ui muted" x="48" y="432" font-size="11">loop and applies each Event</text>
+	<rect id="t" data-box="" class="card" x="560" y="92" width="368" height="64" rx="10"/>
+	<text data-for="t" class="ui ink" x="576" y="116" font-size="13" font-weight="700">Runtime tasks</text>
+	<text data-for="t" class="ui muted" x="576" y="136" font-size="11">server, uploads, port map, sends</text>
+	<rect id="hs" data-box="" class="card" x="560" y="180" width="260" height="80" rx="10"/>
+	<text data-for="hs" class="mono ink" x="576" y="204" font-size="12" font-weight="700">handle.spawn(fut)</text>
+	<text data-for="hs" class="ui muted" x="576" y="224" font-size="11">the command runs here;</text>
+	<text data-for="hs" class="ui muted" x="576" y="240" font-size="11">JoinHandle returns the result</text>
+	<rect id="pu" data-box="" class="card" x="560" y="284" width="368" height="64" rx="10"/>
+	<text data-for="pu" class="ui ink" x="576" y="308" font-size="13" font-weight="700">Event pump</text>
+	<text data-for="pu" class="ui muted" x="576" y="328" font-size="11">ServerEvent → snapshot, then Event</text>
+	<rect id="bc" data-box="" class="card" x="560" y="372" width="368" height="80" rx="10"/>
+	<text data-for="bc" class="mono ink" x="576" y="396" font-size="12" font-weight="700">broadcast::Sender&lt;Event&gt;</text>
+	<text data-for="bc" class="ui muted" x="576" y="416" font-size="11">2048 deep; one BroadcastStream</text>
+	<text data-for="bc" class="ui muted" x="576" y="432" font-size="11">per subscriber</text>
+	<use data-line="" href="#p-click" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-cmd" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-res" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-spawn" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-emit" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-pump" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-event" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-apply" class="wire" marker-end="url(#arr)"/>
+	<use data-line="" href="#p-notify" class="wire" marker-end="url(#arr)"/>
+
+	<g class="motion">
+		<rect class="ring" x="32" y="92" width="368" height="64" rx="10" opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.02;0.04;0.09;0.11;0.9;0.92;0.96;0.98;1" values="0;0;1;1;0;0;1;1;0;0"/></rect>
+		<rect class="ring" x="32" y="180" width="268" height="80" rx="10" opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.09;0.11;0.16;0.18;0.4;0.42;0.47;0.49;1" values="0;0;1;1;0;0;1;1;0;0"/></rect>
+		<rect class="ring" x="560" y="180" width="260" height="80" rx="10" opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.2;0.22;0.32;0.34;1" values="0;0;1;1;0;0"/></rect>
+		<rect class="ring" x="32" y="372" width="368" height="80" rx="10" opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.63;0.65;0.79;0.81;1" values="0;0;1;1;0;0"/></rect>
+		<rect class="ring" x="32" y="284" width="368" height="64" rx="10" opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.82;0.84;0.89;0.91;1" values="0;0;1;1;0;0"/></rect>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.035;0.04;0.09;0.095;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.04;0.09;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-click"/></animateMotion><circle r="4.5" fill="#d6334a"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.095;0.1;0.2;0.205;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.1;0.2;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-cmd"/></animateMotion><circle r="4.5" fill="#d6334a"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.225;0.23;0.28;0.285;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.23;0.28;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-spawn"/></animateMotion><circle r="4.5" fill="#d6334a"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.295;0.3;0.4;0.405;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.3;0.4;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-res"/></animateMotion><circle r="4.5" fill="#d6334a"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.435;0.44;0.5;0.505;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.44;0.5;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-emit"/></animateMotion><circle r="4.5" fill="#2f7bea"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.505;0.51;0.55;0.555;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.51;0.55;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-pump"/></animateMotion><circle r="4.5" fill="#2f7bea"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.555;0.56;0.64;0.645;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.56;0.64;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-event"/></animateMotion><circle r="4.5" fill="#2f7bea"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.615;0.62;0.7;0.705;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.62;0.7;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-event"/></animateMotion><circle r="4.5" fill="#2f7bea"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.675;0.68;0.76;0.765;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.68;0.76;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-event"/></animateMotion><circle r="4.5" fill="#2f7bea"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.765;0.77;0.81;0.815;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.77;0.81;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-apply"/></animateMotion><circle r="4.5" fill="#2f7bea"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.825;0.83;0.91;0.915;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.83;0.91;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-notify"/></animateMotion><circle r="4.5" fill="#2f7bea"/></g>
+	</g>
+	<g class="static"></g>
+</svg>

@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Mailslot architecture diagram: the Engine contract, commands in and a typed event stream plus a state snapshot out.
+	Light by default, dark through prefers-color-scheme, a complete still frame under prefers-reduced-motion.
+
+	(c) Copyright 2026 Liminal HQ, Scott Morris
+	SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520" role="img" aria-labelledby="title desc" data-loop="10">
+	<title id="title">Mailslot Engine contract</title>
+	<desc id="desc">On the left, the commands a frontend calls on the Engine, each an async fn that runs on the engine's tokio runtime: start, stop, pause, resume, rotate_token, update_settings, set_internet_exposed, send and cancel_send. The Engine is built with Engine::builder() and is cheap to clone. On the right, subscribe() returns an EventStream of typed events on a broadcast channel 2048 events deep, and state() returns an EngineState snapshot with the status, links, uploads, sends and router state. Animated: start() goes in, then StateChanged Starting, StateChanged Sharing, Upload Started, Upload Progress and Upload Finished appear on the stream while the snapshot follows from Stopped to Sharing with one saved upload; finally stop() goes in.</desc>
+
+	<style>
+		.ui { font-family: ui-sans-serif, system-ui, sans-serif; }
+		.mono { font-family: ui-monospace, monospace; }
+		.bg-a { stop-color: #ffffff; }
+		.bg-b { stop-color: #eaf0fa; }
+		.ink { fill: #161c2d; }
+		.muted { fill: #4b566e; }
+		.red-ink { fill: #b81d32; }
+		.white { fill: #ffffff; }
+		.panel { fill: #f5f7fc; stroke: #d3dbea; }
+		.card { fill: #ffffff; stroke: #c3cce0; }
+		.engine { fill: #fdf0f2; stroke: #eaa6af; }
+		.wire { fill: none; stroke: #7d89a3; stroke-width: 1.6; }
+		.soft { stroke-dasharray: 4 4; }
+		.arrow { fill: #7d89a3; }
+		.ring { fill: none; stroke: #2f7bea; stroke-width: 2.2; }
+		.lit { fill: #2f7bea; fill-opacity: 0.16; stroke: #2f7bea; stroke-width: 1.6; }
+		.edge { fill: none; stroke: #d6334a; stroke-width: 1.4; stroke-dasharray: 6 5; }
+		.static { display: none; }
+		@media (prefers-color-scheme: dark) {
+			.bg-a { stop-color: #0d1220; }
+			.bg-b { stop-color: #161d33; }
+			.ink { fill: #f4f6fb; }
+			.muted { fill: #b8c2d8; }
+			.red-ink { fill: #ff8a96; }
+			.panel { fill: #131a2c; stroke: #2a3452; }
+			.card { fill: #1c243a; stroke: #36425f; }
+			.engine { fill: #2a1622; stroke: #7a2e3c; }
+			.wire { stroke: #8b97b1; }
+			.arrow { fill: #8b97b1; }
+			.ring { stroke: #5b9cff; }
+			.lit { fill: #5b9cff; fill-opacity: 0.22; stroke: #5b9cff; }
+			.edge { stroke: #ff6f7d; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			.motion { display: none; }
+			.static { display: inline; }
+		}
+	</style>
+
+	<defs>
+		<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+			<stop class="bg-a" offset="0"/>
+			<stop class="bg-b" offset="1"/>
+		</linearGradient>
+		<linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#d6334a"/>
+			<stop offset="1" stop-color="#a8172c"/>
+		</linearGradient>
+		<linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#2a6fe0"/>
+			<stop offset="1" stop-color="#1a52b8"/>
+		</linearGradient>
+		<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+			<path class="arrow" d="M0 1 L10 5 L0 9 z"/>
+		</marker>
+		<path id="p-start" d="M220 73 H 228 V 226 H 292"/>
+		<path id="p-stop" d="M220 111 H 228 V 226 H 292"/>
+		<path id="p-cmd" d="M228 226 H 294"/>
+	</defs>
+
+	<rect data-bg="" width="960" height="520" rx="16" fill="url(#bg)"/>
+
+	<rect id="cmds" data-box="" class="panel" x="16" y="16" width="220" height="488" rx="14"/>
+	<text data-for="cmds" class="ui muted" x="32" y="44" font-size="11" font-weight="700" letter-spacing="1">COMMANDS</text>
+	<rect id="c-start" data-box="" class="card" x="32" y="58" width="188" height="30" rx="6"/>
+	<text data-for="c-start" class="mono ink" x="44" y="77" font-size="11">start()</text>
+	<rect id="c-stop" data-box="" class="card" x="32" y="96" width="188" height="30" rx="6"/>
+	<text data-for="c-stop" class="mono ink" x="44" y="115" font-size="11">stop()</text>
+	<rect id="c-pause" data-box="" class="card" x="32" y="134" width="188" height="30" rx="6"/>
+	<text data-for="c-pause" class="mono ink" x="44" y="153" font-size="11">pause()</text>
+	<rect id="c-resume" data-box="" class="card" x="32" y="172" width="188" height="30" rx="6"/>
+	<text data-for="c-resume" class="mono ink" x="44" y="191" font-size="11">resume()</text>
+	<rect id="c-rotate_token" data-box="" class="card" x="32" y="210" width="188" height="30" rx="6"/>
+	<text data-for="c-rotate_token" class="mono ink" x="44" y="229" font-size="11">rotate_token()</text>
+	<rect id="c-update_settings" data-box="" class="card" x="32" y="248" width="188" height="30" rx="6"/>
+	<text data-for="c-update_settings" class="mono ink" x="44" y="267" font-size="11">update_settings(c)</text>
+	<rect id="c-set_internet_exposed" data-box="" class="card" x="32" y="286" width="188" height="30" rx="6"/>
+	<text data-for="c-set_internet_exposed" class="mono ink" x="44" y="305" font-size="11">set_internet_exposed</text>
+	<rect id="c-send" data-box="" class="card" x="32" y="324" width="188" height="30" rx="6"/>
+	<text data-for="c-send" class="mono ink" x="44" y="343" font-size="11">send(SendRequest)</text>
+	<rect id="c-cancel_send" data-box="" class="card" x="32" y="362" width="188" height="30" rx="6"/>
+	<text data-for="c-cancel_send" class="mono ink" x="44" y="381" font-size="11">cancel_send(id)</text>
+	<text data-for="cmds" class="ui muted" x="32" y="432" font-size="11">Each command is an</text>
+	<text data-for="cmds" class="ui muted" x="32" y="448" font-size="11">async fn that runs on</text>
+	<text data-for="cmds" class="ui muted" x="32" y="464" font-size="11">the engine's runtime</text>
+
+	<rect id="engine" data-box="" x="296" y="140" width="264" height="180" rx="14" fill="url(#red)"/>
+	<text data-for="engine" class="ui white" x="316" y="172" font-size="16" font-weight="700">Engine</text>
+	<text data-for="engine" class="ui white" x="316" y="200" font-size="11">cheap to clone; clones share</text>
+	<text data-for="engine" class="ui white" x="316" y="218" font-size="11">one inner state</text>
+	<text data-for="engine" class="ui white" x="316" y="244" font-size="11">runs on a tokio Handle,</text>
+	<text data-for="engine" class="ui white" x="316" y="262" font-size="11">or on its own runtime</text>
+	<rect id="builder" data-box="" class="card" x="296" y="352" width="264" height="124" rx="10"/>
+	<text data-for="builder" class="mono ink" x="312" y="378" font-size="12" font-weight="700">Engine::builder()</text>
+	<text data-for="builder" class="mono muted" x="324" y="400" font-size="11">.config(config)</text>
+	<text data-for="builder" class="mono muted" x="324" y="418" font-size="11">.runtime_handle(handle)</text>
+	<text data-for="builder" class="mono muted" x="324" y="436" font-size="11">.persist(false)</text>
+	<text data-for="builder" class="mono muted" x="324" y="454" font-size="11">.build().await?</text>
+
+	<rect id="stream" data-box="" class="panel" x="600" y="16" width="344" height="344" rx="14"/>
+	<text data-for="stream" class="mono ink" x="616" y="44" font-size="12" font-weight="700">subscribe() → EventStream</text>
+	<text data-for="stream" class="mono muted" x="616" y="256" font-size="11">Send(..) · Internet(..)</text>
+	<text data-for="stream" class="mono muted" x="616" y="272" font-size="11">TokenRotated · SettingsChanged</text>
+	<text data-for="stream" class="mono muted" x="616" y="288" font-size="11">Stopped(reason) · Lagged(n)</text>
+	<text data-for="stream" class="ui muted" x="616" y="318" font-size="11">broadcast channel, 2048 events deep;</text>
+	<text data-for="stream" class="ui muted" x="616" y="334" font-size="11">a slow reader gets Lagged(n): call state()</text>
+
+	<rect id="snap" data-box="" class="panel" x="600" y="376" width="344" height="128" rx="14"/>
+	<text data-for="snap" class="mono ink" x="616" y="402" font-size="12" font-weight="700">state() → EngineState</text>
+	<text data-for="snap" class="mono muted" x="616" y="426" font-size="11">status</text>
+	<text data-for="snap" class="mono muted" x="616" y="444" font-size="11">urls</text>
+	<text data-for="snap" class="mono muted" x="616" y="462" font-size="11">uploads</text>
+	<text data-for="snap" class="ui muted" x="616" y="484" font-size="11">+ sends, internet, paused, …</text>
+
+	<use data-line="" href="#p-cmd" class="wire" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M220 73 H 228 V 377 H 220"/>
+	<path data-line="" class="wire" d="M220 111 H 228"/>
+	<path data-line="" class="wire" d="M220 149 H 228"/>
+	<path data-line="" class="wire" d="M220 187 H 228"/>
+	<path data-line="" class="wire" d="M220 225 H 228"/>
+	<path data-line="" class="wire" d="M220 263 H 228"/>
+	<path data-line="" class="wire" d="M220 301 H 228"/>
+	<path data-line="" class="wire" d="M220 339 H 228"/>
+	<path data-line="" class="wire" d="M560 180 H 598" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M560 296 C 584 296, 576 440, 598 440" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M428 352 V 322" marker-end="url(#arr)"/>
+
+	<g class="motion">
+		<rect class="ring" x="32" y="58" width="188" height="30" rx="6" opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.02;0.04;0.14;0.16;1" values="0;0;1;1;0;0"/></rect>
+		<rect class="ring" x="32" y="96" width="188" height="30" rx="6" opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.84;0.86;0.92;0.94;1" values="0;0;1;1;0;0"/></rect>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.035;0.04;0.12;0.125;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.04;0.12;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-start"/></animateMotion><circle r="4.5" fill="#d6334a"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.845;0.85;0.92;0.925;1" values="0;0;1;1;0;0"/><animateMotion dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.85;0.92;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-stop"/></animateMotion><circle r="4.5" fill="#d6334a"/></g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.13;0.15;0.92;0.94;1" values="0;0;1;1;0;0"/>
+		<rect id="e1m" data-box="" class="card" x="616" y="60" width="312" height="28" rx="6"/>
+		<text data-for="e1m" class="mono ink" x="628" y="78" font-size="11">StateChanged · Starting</text>
+		</g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.21;0.23;0.92;0.94;1" values="0;0;1;1;0;0"/>
+		<rect id="e2m" data-box="" class="card" x="616" y="94" width="312" height="28" rx="6"/>
+		<text data-for="e2m" class="mono ink" x="628" y="112" font-size="11">StateChanged · Sharing</text>
+		</g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.33;0.35;0.92;0.94;1" values="0;0;1;1;0;0"/>
+		<rect id="e3m" data-box="" class="card" x="616" y="128" width="312" height="28" rx="6"/>
+		<text data-for="e3m" class="mono ink" x="628" y="146" font-size="11">Upload(Started)</text>
+		</g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.41;0.43;0.92;0.94;1" values="0;0;1;1;0;0"/>
+		<rect id="e4m" data-box="" class="card" x="616" y="162" width="312" height="28" rx="6"/>
+		<text data-for="e4m" class="mono ink" x="628" y="180" font-size="11">Upload(Progress)</text>
+		<text data-for="e4m" class="ui muted" x="916" y="180" font-size="11" text-anchor="end">about 10 Hz</text>
+		</g>
+		<g opacity="0"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.59;0.61;0.92;0.94;1" values="0;0;1;1;0;0"/>
+		<rect id="e5m" data-box="" class="card" x="616" y="196" width="312" height="28" rx="6"/>
+		<text data-for="e5m" class="mono ink" x="628" y="214" font-size="11">Upload(Finished)</text>
+		<text data-for="e5m" class="ui muted" x="916" y="214" font-size="11" text-anchor="end">saved · sha256</text>
+		</g>
+		<g opacity="1"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.13;0.14;0.95;0.96;1" values="1;1;0;0;1;1"/><text data-for="snap" class="mono ink" x="720" y="426" font-size="11">Stopped</text></g>
+		<g opacity="1"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.145;0.155;0.21;0.22;1" values="0;0;1;1;0;0"/><text data-for="snap" class="mono ink" x="720" y="426" font-size="11">Starting</text></g>
+		<g opacity="1"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.22;0.23;0.93;0.94;1" values="0;0;1;1;0;0"/><text data-for="snap" class="mono ink" x="720" y="426" font-size="11">Sharing</text></g>
+		<g opacity="1"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.21;0.22;0.95;0.96;1" values="1;1;0;0;1;1"/><text data-for="snap" class="mono ink" x="720" y="444" font-size="11">[]</text></g>
+		<g opacity="1"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.225;0.235;0.93;0.94;1" values="0;0;1;1;0;0"/><text data-for="snap" class="mono ink" x="720" y="444" font-size="11">2 links</text></g>
+		<g opacity="1"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.32;0.33;0.95;0.96;1" values="1;1;0;0;1;1"/><text data-for="snap" class="mono ink" x="720" y="462" font-size="11">[]</text></g>
+		<g opacity="1"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.335;0.345;0.58;0.59;1" values="0;0;1;1;0;0"/><text data-for="snap" class="mono ink" x="720" y="462" font-size="11">1 receiving</text></g>
+		<g opacity="1"><animate attributeName="opacity" dur="10s" repeatCount="indefinite" keyTimes="0;0.6;0.61;0.93;0.94;1" values="0;0;1;1;0;0"/><text data-for="snap" class="mono ink" x="720" y="462" font-size="11">1 saved</text></g>
+	</g>
+	<g class="static">
+		<rect id="e1s" data-box="" class="card" x="616" y="60" width="312" height="28" rx="6"/>
+		<text data-for="e1s" class="mono ink" x="628" y="78" font-size="11">StateChanged · Starting</text>
+		<rect id="e2s" data-box="" class="card" x="616" y="94" width="312" height="28" rx="6"/>
+		<text data-for="e2s" class="mono ink" x="628" y="112" font-size="11">StateChanged · Sharing</text>
+		<rect id="e3s" data-box="" class="card" x="616" y="128" width="312" height="28" rx="6"/>
+		<text data-for="e3s" class="mono ink" x="628" y="146" font-size="11">Upload(Started)</text>
+		<rect id="e4s" data-box="" class="card" x="616" y="162" width="312" height="28" rx="6"/>
+		<text data-for="e4s" class="mono ink" x="628" y="180" font-size="11">Upload(Progress)</text>
+		<text data-for="e4s" class="ui muted" x="916" y="180" font-size="11" text-anchor="end">about 10 Hz</text>
+		<rect id="e5s" data-box="" class="card" x="616" y="196" width="312" height="28" rx="6"/>
+		<text data-for="e5s" class="mono ink" x="628" y="214" font-size="11">Upload(Finished)</text>
+		<text data-for="e5s" class="ui muted" x="916" y="214" font-size="11" text-anchor="end">saved · sha256</text>
+		<text data-for="snap" class="mono ink" x="720" y="426" font-size="11">Sharing</text>
+		<text data-for="snap" class="mono ink" x="720" y="444" font-size="11">2 links</text>
+		<text data-for="snap" class="mono ink" x="720" y="462" font-size="11">1 saved</text>
+	</g>
+</svg>

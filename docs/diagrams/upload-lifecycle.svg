@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Mailslot architecture diagram: the server pipeline for one upload, from the token gate to the claimed file name.
+	Light by default, dark through prefers-color-scheme, a complete still frame under prefers-reduced-motion.
+
+	(c) Copyright 2026 Liminal HQ, Scott Morris
+	SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="556" viewBox="0 0 960 556" role="img" aria-labelledby="title desc" data-loop="12">
+	<title id="title">Mailslot upload lifecycle</title>
+	<desc id="desc">One PUT to /&lt;token&gt;/&lt;name&gt; passes four stages on the server. Gate: a locked-out address or a wrong token gets the same 404 (the token is compared in constant time and failures count towards the lockout), then the rate limit (429), link expiry (410) and pause (503). Admit: the name is sanitized and the extension rule (415), checksum, upload id and Content-Range headers (400), declared size (413), session quota (507), concurrent uploads (429), free space (507) and the file-count rule (410) are checked, then Upload::Started is emitted. Stream: the body is written to a .mailslot-&lt;key&gt;.part file while SHA-256 is updated per chunk; Progress events go out about ten times a second, limits are rechecked, a stall times out (408), a new link cancels the upload (410), a start that does not match the partial file is refused (409), and a partial Content-Range ends with 202 and the offset, keeping the part. Claim: a wrong expected checksum gives 422, then the server hard-links the part to the final name, which fails if the name exists, so it tries photo-1.jpg and never overwrites (an abandoned part older than an hour is swept when the server starts); the part is removed, Upload::Finished is emitted, history is appended and the response is 201 Created with X-Mailslot-Saved-As and X-Mailslot-Sha256. An aborted upload without an upload id deletes its part through a drop guard. Animated: a request moves through the stages while the part file fills and the hash changes, the final name is claimed and the events appear in order.</desc>
+
+	<style>
+		.ui { font-family: ui-sans-serif, system-ui, sans-serif; }
+		.mono { font-family: ui-monospace, monospace; }
+		.bg-a { stop-color: #ffffff; }
+		.bg-b { stop-color: #eaf0fa; }
+		.ink { fill: #161c2d; }
+		.muted { fill: #4b566e; }
+		.red-ink { fill: #b81d32; }
+		.green-ink { fill: #1d6b31; }
+		.white { fill: #ffffff; }
+		.panel { fill: #f5f7fc; stroke: #d3dbea; }
+		.card { fill: #ffffff; stroke: #c3cce0; }
+		.reject { fill: #fdf0f2; stroke: #eaa6af; }
+		.good { fill: #edf8f0; stroke: #9fd3ad; }
+		.wire { fill: none; stroke: #7d89a3; stroke-width: 1.6; }
+		.soft { stroke-dasharray: 4 4; }
+		.life { fill: none; stroke: #aab4c8; stroke-width: 1.4; stroke-dasharray: 2 5; }
+		.cut { fill: none; stroke: #b81d32; stroke-width: 2; stroke-linecap: round; }
+		.arrow { fill: #7d89a3; }
+		.track { fill: #dce3f0; }
+		.hi { fill: none; stroke: #2f7bea; stroke-width: 2.4; }
+		.slot { fill: none; stroke: #b4bfd6; stroke-dasharray: 3 3; }
+		.ok { fill: none; stroke: #23883a; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+		.static { display: none; }
+		@media (prefers-color-scheme: dark) {
+			.bg-a { stop-color: #0d1220; }
+			.bg-b { stop-color: #161d33; }
+			.ink { fill: #f4f6fb; }
+			.muted { fill: #b8c2d8; }
+			.red-ink { fill: #ff8a96; }
+			.green-ink { fill: #7ee39a; }
+			.panel { fill: #131a2c; stroke: #2a3452; }
+			.card { fill: #1c243a; stroke: #36425f; }
+			.reject { fill: #2a1622; stroke: #7a2e3c; }
+			.good { fill: #12281a; stroke: #2f6b40; }
+			.wire { stroke: #8b97b1; }
+			.life { stroke: #4a5675; }
+			.cut { stroke: #ff8a96; }
+			.arrow { fill: #8b97b1; }
+			.track { fill: #2b3555; }
+			.hi { stroke: #6ea8ff; }
+			.slot { stroke: #3d4968; }
+			.ok { stroke: #4ad06a; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			.motion { display: none; }
+			.static { display: inline; }
+		}
+	</style>
+
+	<defs>
+		<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+			<stop class="bg-a" offset="0"/>
+			<stop class="bg-b" offset="1"/>
+		</linearGradient>
+		<linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#d6334a"/>
+			<stop offset="1" stop-color="#a8172c"/>
+		</linearGradient>
+		<linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#2a6fe0"/>
+			<stop offset="1" stop-color="#1a52b8"/>
+		</linearGradient>
+		<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+			<path class="arrow" d="M0 1 L10 5 L0 9 z"/>
+		</marker>
+		<path id="p-req" d="M124 52 V 62 H 826 V 52"/>
+	</defs>
+
+	<rect data-bg="" width="960" height="556" rx="16" fill="url(#bg)"/>
+
+	<!-- Request and response -->
+	<rect id="req" data-box="" class="card" x="24" y="16" width="200" height="36" rx="18"/>
+	<text data-for="req" class="mono ink" x="40" y="39" font-size="12">PUT /&lt;token&gt;/photo.jpg</text>
+	<use data-line="" href="#p-req" class="wire soft"/>
+	<rect class="slot" x="716" y="16" width="220" height="36" rx="18"/>
+
+	<!-- Stages -->
+	<rect id="gate" data-box="" class="card" x="24" y="72" width="200" height="172" rx="12"/>
+	<text data-for="gate" class="ui ink" x="40" y="96" font-size="13" font-weight="700">1  Gate</text>
+	<text data-for="gate" class="ui muted" x="40" y="116" font-size="11">IP lockout</text>
+	<text data-for="gate" class="ui muted" x="40" y="132" font-size="11">token, constant time</text>
+	<text data-for="gate" class="ui muted" x="40" y="148" font-size="11">rate limit, expiry</text>
+	<text data-for="gate" class="ui muted" x="40" y="164" font-size="11">paused</text>
+	<rect id="admit" data-box="" class="card" x="248" y="72" width="200" height="172" rx="12"/>
+	<text data-for="admit" class="ui ink" x="264" y="96" font-size="13" font-weight="700">2  Admit</text>
+	<text data-for="admit" class="ui muted" x="264" y="116" font-size="11">sanitize the name</text>
+	<text data-for="admit" class="ui muted" x="264" y="132" font-size="11">headers, type, size</text>
+	<text data-for="admit" class="ui muted" x="264" y="148" font-size="11">quota, upload slots</text>
+	<text data-for="admit" class="ui muted" x="264" y="164" font-size="11">free space, file count</text>
+	<rect id="stream" data-box="" class="card" x="472" y="72" width="220" height="172" rx="12"/>
+	<text data-for="stream" class="ui ink" x="488" y="96" font-size="13" font-weight="700">3  Stream</text>
+	<text data-for="stream" class="ui muted" x="488" y="116" font-size="11">write the .part file</text>
+	<text data-for="stream" class="ui muted" x="488" y="132" font-size="11">SHA-256 per chunk</text>
+	<text data-for="stream" class="ui muted" x="488" y="148" font-size="11">limits rechecked</text>
+	<rect id="claim" data-box="" class="card" x="716" y="72" width="220" height="172" rx="12"/>
+	<text data-for="claim" class="ui ink" x="732" y="96" font-size="13" font-weight="700">4  Claim</text>
+	<text data-for="claim" class="ui muted" x="732" y="116" font-size="11">checksum, verify</text>
+	<text data-for="claim" class="ui muted" x="732" y="132" font-size="11">hard_link to the name</text>
+	<text data-for="claim" class="ui muted" x="732" y="148" font-size="11">never overwrites</text>
+	<path data-line="" class="wire" d="M224 158 H 246" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M448 158 H 470" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M692 158 H 714" marker-end="url(#arr)"/>
+	<rect id="part" data-box="" class="panel" x="488" y="164" width="188" height="64" rx="8"/>
+	<text data-for="part" class="mono ink" x="498" y="182" font-size="11">.mailslot-3e9a….part</text>
+	<rect class="track" x="498" y="190" width="168" height="6" rx="3"/>
+	<rect id="taken" data-box="" class="panel" x="732" y="164" width="188" height="28" rx="6"/>
+	<text data-for="taken" class="mono muted" x="742" y="182" font-size="11">photo.jpg</text>
+	<text data-for="taken" class="ui muted" x="910" y="182" font-size="11" text-anchor="end">exists</text>
+
+	<!-- Outcomes off each stage -->
+	<rect id="c1" data-box="" class="reject" x="24" y="254" width="200" height="24" rx="12"/>
+	<text data-for="c1" class="mono red-ink" x="36" y="270" font-size="11">404 locked, bad token</text>
+	<rect id="c2" data-box="" class="reject" x="24" y="282" width="200" height="24" rx="12"/>
+	<text data-for="c2" class="mono red-ink" x="36" y="298" font-size="11">429 rate limit</text>
+	<rect id="c3" data-box="" class="reject" x="24" y="310" width="200" height="24" rx="12"/>
+	<text data-for="c3" class="mono red-ink" x="36" y="326" font-size="11">410 link expired</text>
+	<rect id="c4" data-box="" class="reject" x="24" y="338" width="200" height="24" rx="12"/>
+	<text data-for="c4" class="mono red-ink" x="36" y="354" font-size="11">503 paused</text>
+	<rect id="c5" data-box="" class="reject" x="248" y="254" width="200" height="24" rx="12"/>
+	<text data-for="c5" class="mono red-ink" x="260" y="270" font-size="11">400 bad header</text>
+	<rect id="c6" data-box="" class="reject" x="248" y="282" width="200" height="24" rx="12"/>
+	<text data-for="c6" class="mono red-ink" x="260" y="298" font-size="11">415 type not allowed</text>
+	<rect id="c7" data-box="" class="reject" x="248" y="310" width="200" height="24" rx="12"/>
+	<text data-for="c7" class="mono red-ink" x="260" y="326" font-size="11">413 too large</text>
+	<rect id="c8" data-box="" class="reject" x="248" y="338" width="200" height="24" rx="12"/>
+	<text data-for="c8" class="mono red-ink" x="260" y="354" font-size="11">507 quota, free space</text>
+	<rect id="c9" data-box="" class="reject" x="248" y="366" width="200" height="24" rx="12"/>
+	<text data-for="c9" class="mono red-ink" x="260" y="382" font-size="11">429 too many uploads</text>
+	<rect id="c10" data-box="" class="reject" x="248" y="394" width="200" height="24" rx="12"/>
+	<text data-for="c10" class="mono red-ink" x="260" y="410" font-size="11">410 file limit</text>
+	<rect id="c11" data-box="" class="reject" x="472" y="254" width="220" height="24" rx="12"/>
+	<text data-for="c11" class="mono red-ink" x="484" y="270" font-size="11">409 offset mismatch</text>
+	<rect id="c12" data-box="" class="reject" x="472" y="282" width="220" height="24" rx="12"/>
+	<text data-for="c12" class="mono red-ink" x="484" y="298" font-size="11">408 upload stalled</text>
+	<rect id="c13" data-box="" class="reject" x="472" y="310" width="220" height="24" rx="12"/>
+	<text data-for="c13" class="mono red-ink" x="484" y="326" font-size="11">410 link replaced</text>
+	<rect id="c14" data-box="" class="reject" x="472" y="338" width="220" height="24" rx="12"/>
+	<text data-for="c14" class="mono red-ink" x="484" y="354" font-size="11">413, 507 over a limit</text>
+	<rect id="c15" data-box="" class="panel" x="472" y="366" width="220" height="24" rx="12"/>
+	<text data-for="c15" class="mono ink" x="484" y="382" font-size="11">202 partial, part kept</text>
+	<rect id="c16" data-box="" class="reject" x="716" y="254" width="220" height="24" rx="12"/>
+	<text data-for="c16" class="mono red-ink" x="728" y="270" font-size="11">422 checksum mismatch</text>
+	<rect id="c17" data-box="" class="reject" x="716" y="282" width="220" height="24" rx="12"/>
+	<text data-for="c17" class="mono red-ink" x="728" y="298" font-size="11">409 name taken (reject)</text>
+	<rect id="c18" data-box="" class="good" x="716" y="310" width="220" height="24" rx="12"/>
+	<text data-for="c18" class="mono green-ink" x="728" y="326" font-size="11">201 Saved-As, Sha256</text>
+
+	<rect id="guard" data-box="" class="panel" x="24" y="432" width="912" height="48" rx="10"/>
+	<text data-for="guard" class="ui ink" x="40" y="452" font-size="12" font-weight="700">Drop guard</text>
+	<text data-for="guard" class="ui muted" x="40" y="469" font-size="11">Every exit path reports and cleans up. An aborted upload without an upload id deletes its .part file; with X-Mailslot-Upload-Id the part stays for a resume.</text>
+
+	<!-- Events -->
+	<text class="ui muted" x="24" y="520" font-size="11" font-weight="700" letter-spacing="1">EVENTS</text>
+	<rect class="slot" x="96" y="502" width="140" height="26" rx="13"/>
+	<rect class="slot" x="256" y="502" width="144" height="26" rx="13"/>
+	<rect class="slot" x="420" y="502" width="144" height="26" rx="13"/>
+	<rect class="slot" x="584" y="502" width="132" height="26" rx="13"/>
+	<path data-line="" class="wire" d="M238 515 H 254" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M402 515 H 418" marker-end="url(#arr)"/>
+	<path data-line="" class="wire" d="M566 515 H 582" marker-end="url(#arr)"/>
+	<rect id="e5" data-box="" class="reject" x="752" y="502" width="184" height="26" rx="13"/>
+	<text data-for="e5" class="mono red-ink" x="766" y="519" font-size="11">Upload::Rejected</text>
+
+	<g class="motion">
+		<rect class="hi" x="24" y="72" width="200" height="172" rx="12" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.07;0.09;0.14;0.16;1" values="0;0;1;1;0;0"/>
+		</rect>
+		<rect class="hi" x="248" y="72" width="200" height="172" rx="12" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.15;0.17;0.22;0.24;1" values="0;0;1;1;0;0"/>
+		</rect>
+		<rect class="hi" x="472" y="72" width="220" height="172" rx="12" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.23;0.25;0.53;0.55;1" values="0;0;1;1;0;0"/>
+		</rect>
+		<rect class="hi" x="716" y="72" width="220" height="172" rx="12" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.54;0.56;0.64;0.66;1" values="0;0;1;1;0;0"/>
+		</rect>
+
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.035;0.045;0.655;0.665;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.04;0.08;0.12;0.16;0.2;0.24;0.52;0.56;0.64;0.66;1" keyPoints="0;0;0.0139;0.0139;0.324;0.324;0.648;0.648;0.986;0.986;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-req"/></animateMotion>
+			<rect x="-6" y="-8" width="12" height="16" rx="2" fill="url(#blue)"/>
+			<path d="M-3 -3 H3 M-3 1 H3" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round"/>
+		</g>
+
+		<g opacity="1">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.92;0.95;0.97;1" values="1;1;0;0;1"/>
+			<rect x="498" y="190" width="0" height="6" rx="3" fill="url(#blue)">
+				<animate attributeName="width" dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.25;0.52;0.955;0.96;1" keySplines="0 0 1 1;0.3 0 0.3 1;0 0 1 1;0 0 1 1;0 0 1 1" values="0;0;168;168;0;0"/>
+			</rect>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" calcMode="discrete" keyTimes="0;0.25;0.3" values="0;1;0"/>
+			<text data-for="part" class="mono muted" x="498" y="218" font-size="11">sha256 3a7f…</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" calcMode="discrete" keyTimes="0;0.3;0.36" values="0;1;0"/>
+			<text data-for="part" class="mono muted" x="498" y="218" font-size="11">sha256 c41e…</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" calcMode="discrete" keyTimes="0;0.36;0.42" values="0;1;0"/>
+			<text data-for="part" class="mono muted" x="498" y="218" font-size="11">sha256 77d0…</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" calcMode="discrete" keyTimes="0;0.42;0.48" values="0;1;0"/>
+			<text data-for="part" class="mono muted" x="498" y="218" font-size="11">sha256 e8b2…</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" calcMode="discrete" keyTimes="0;0.48;0.93" values="0;1;0"/>
+			<text data-for="part" class="mono muted" x="498" y="218" font-size="11">sha256 9f2c…e41a</text>
+		</g>
+
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.57;0.6;0.92;0.95;1" values="0;0;1;1;0;0"/>
+			<rect id="claimed-m" data-box="" class="good" x="732" y="200" width="188" height="28" rx="6"/>
+			<text data-for="claimed-m" class="mono green-ink" x="742" y="218" font-size="11">photo-1.jpg</text>
+			<path class="ok" d="M896 214 l3.5 3.5 7 -7"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.64;0.67;0.92;0.95;1" values="0;0;1;1;0;0"/>
+			<rect id="resp-m" data-box="" class="good" x="716" y="16" width="220" height="36" rx="18"/>
+			<text data-for="resp-m" class="ui green-ink" x="732" y="39" font-size="13" font-weight="700">201 Created</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.19;0.22;0.92;0.95;1" values="0;0;1;1;0;0"/>
+		<rect id="e1m" data-box="" class="card" x="96" y="502" width="140" height="26" rx="13"/>
+		<text data-for="e1m" class="mono ink" x="108" y="519" font-size="11">Upload::Started</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.26;0.29;0.92;0.95;1" values="0;0;1;1;0;0"/>
+		<rect id="e2m" data-box="" class="card" x="256" y="502" width="144" height="26" rx="13"/>
+		<text data-for="e2m" class="mono ink" x="268" y="519" font-size="11">Upload::Progress</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.6;0.63;0.92;0.95;1" values="0;0;1;1;0;0"/>
+		<rect id="e3m" data-box="" class="card" x="420" y="502" width="144" height="26" rx="13"/>
+		<text data-for="e3m" class="mono ink" x="432" y="519" font-size="11">Upload::Finished</text>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.62;0.65;0.92;0.95;1" values="0;0;1;1;0;0"/>
+		<rect id="e4m" data-box="" class="card" x="584" y="502" width="132" height="26" rx="13"/>
+		<text data-for="e4m" class="mono ink" x="596" y="519" font-size="11">history.jsonl</text>
+		</g>
+		<rect class="hi" x="256" y="502" width="144" height="26" rx="13" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.26;0.3;0.34;0.38;0.42;0.46;0.5;0.54;1" values="0;0;1;0.2;1;0.2;1;0.2;0;0"/>
+		</rect>
+	</g>
+
+	<!-- Still frame for reduced motion: the upload is saved -->
+	<g class="static">
+		<rect x="498" y="190" width="168" height="6" rx="3" fill="url(#blue)"/>
+		<text data-for="part" class="mono muted" x="498" y="218" font-size="11">sha256 9f2c…e41a</text>
+		<rect id="claimed-s" data-box="" class="good" x="732" y="200" width="188" height="28" rx="6"/>
+		<text data-for="claimed-s" class="mono green-ink" x="742" y="218" font-size="11">photo-1.jpg</text>
+		<path class="ok" d="M896 214 l3.5 3.5 7 -7"/>
+		<rect id="resp-s" data-box="" class="good" x="716" y="16" width="220" height="36" rx="18"/>
+		<text data-for="resp-s" class="ui green-ink" x="732" y="39" font-size="13" font-weight="700">201 Created</text>
+		<rect id="e1s" data-box="" class="card" x="96" y="502" width="140" height="26" rx="13"/>
+		<text data-for="e1s" class="mono ink" x="108" y="519" font-size="11">Upload::Started</text>
+		<rect id="e2s" data-box="" class="card" x="256" y="502" width="144" height="26" rx="13"/>
+		<text data-for="e2s" class="mono ink" x="268" y="519" font-size="11">Upload::Progress</text>
+		<rect id="e3s" data-box="" class="card" x="420" y="502" width="144" height="26" rx="13"/>
+		<text data-for="e3s" class="mono ink" x="432" y="519" font-size="11">Upload::Finished</text>
+		<rect id="e4s" data-box="" class="card" x="584" y="502" width="132" height="26" rx="13"/>
+		<text data-for="e4s" class="mono ink" x="596" y="519" font-size="11">history.jsonl</text>
+	</g>
+</svg>

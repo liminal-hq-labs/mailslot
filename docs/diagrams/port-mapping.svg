@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Mailslot architecture diagram: the router port-mapping lifecycle, from Off through Mapping and Open to removal.
+	Light by default, dark through prefers-color-scheme, a complete still frame under prefers-reduced-motion.
+
+	(c) Copyright 2026 Liminal HQ, Scott Morris
+	SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-labelledby="title desc" data-loop="12">
+	<title id="title">Mailslot port-mapping lifecycle</title>
+	<desc id="desc">Internet exposure starts Off. Switching it on while sharing moves it to Mapping: an optional public address lookup, removal of stale Mailslot mappings, an SSDP search for a UPnP gateway and an AddPortMapping request with a lease, falling back to any free external port and then to PCP or NAT-PMP. A mapping moves to Open with the external URL and is renewed at half its lease, which is at most one hour and never past the link expiry. Stop, quit or a signal moves it to Removing, which deletes the mapping within eight seconds, and back to Off. A failed attempt moves to Failed with a plain-words diagnostic: no gateway, mapping refused or port conflict. Carrier-grade NAT, double NAT and an address mismatch are warnings attached to an open mapping. Animated: a token travels the states, the lease renews twice and the mapping is removed on stop.</desc>
+
+	<style>
+		.ui { font-family: ui-sans-serif, system-ui, sans-serif; }
+		.mono { font-family: ui-monospace, monospace; }
+		.bg-a { stop-color: #ffffff; }
+		.bg-b { stop-color: #eaf0fa; }
+		.ink { fill: #161c2d; }
+		.muted { fill: #4b566e; }
+		.red-ink { fill: #b81d32; }
+		.white { fill: #ffffff; }
+		.panel { fill: #f5f7fc; stroke: #d3dbea; }
+		.card { fill: #ffffff; stroke: #c3cce0; }
+		.engine { fill: #fdf0f2; stroke: #eaa6af; }
+		.wire { fill: none; stroke: #7d89a3; stroke-width: 1.6; }
+		.soft { stroke-dasharray: 4 4; }
+		.arrow { fill: #7d89a3; }
+		.ring { fill: none; stroke: #2f7bea; stroke-width: 2.5; }
+		.warn { fill: none; stroke: #d6334a; stroke-width: 2.5; }
+		.static { display: none; }
+		@media (prefers-color-scheme: dark) {
+			.bg-a { stop-color: #0d1220; }
+			.bg-b { stop-color: #161d33; }
+			.ink { fill: #f4f6fb; }
+			.muted { fill: #b8c2d8; }
+			.red-ink { fill: #ff8a96; }
+			.panel { fill: #131a2c; stroke: #2a3452; }
+			.card { fill: #1c243a; stroke: #36425f; }
+			.engine { fill: #2a1622; stroke: #7a2e3c; }
+			.wire { stroke: #8b97b1; }
+			.arrow { fill: #8b97b1; }
+			.ring { stroke: #5b9cff; }
+			.warn { stroke: #ff6b7a; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			.motion { display: none; }
+			.static { display: inline; }
+		}
+	</style>
+
+	<defs>
+		<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+			<stop class="bg-a" offset="0"/>
+			<stop class="bg-b" offset="1"/>
+		</linearGradient>
+		<linearGradient id="red" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#d6334a"/>
+			<stop offset="1" stop-color="#a8172c"/>
+		</linearGradient>
+		<linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+			<stop offset="0" stop-color="#2a6fe0"/>
+			<stop offset="1" stop-color="#1a52b8"/>
+		</linearGradient>
+		<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse">
+			<path class="arrow" d="M0 1 L10 5 L0 9 z"/>
+		</marker>
+		<path id="p-start" d="M184 92 H 262"/>
+		<path id="p-mapped" d="M444 92 H 522"/>
+		<path id="p-renew" d="M584 56 C 584 22, 644 22, 644 54"/>
+		<path id="p-stop" d="M614 128 V 214"/>
+		<path id="p-fail" d="M354 128 V 214"/>
+		<path id="p-back" d="M614 288 V 312 H 104 V 130"/>
+		<circle id="token" r="6" fill="url(#red)" stroke="#ffffff" stroke-width="1.5"/>
+	</defs>
+
+	<rect data-bg="" width="960" height="540" rx="16" fill="url(#bg)"/>
+
+	<!-- States -->
+	<rect id="st-off" data-box="" class="card" x="24" y="56" width="160" height="72" rx="10"/>
+	<text data-for="st-off" class="ui ink" x="40" y="84" font-size="13" font-weight="700">Off</text>
+	<text data-for="st-off" class="ui muted" x="40" y="104" font-size="11">not requested</text>
+
+	<rect id="st-map" data-box="" class="card" x="264" y="56" width="180" height="72" rx="10"/>
+	<text data-for="st-map" class="ui ink" x="280" y="84" font-size="13" font-weight="700">Mapping</text>
+	<text data-for="st-map" class="ui muted" x="280" y="104" font-size="11">asking the router</text>
+
+	<rect id="st-open" data-box="" x="524" y="56" width="180" height="72" rx="10" fill="url(#blue)"/>
+	<text data-for="st-open" class="ui white" x="540" y="80" font-size="13" font-weight="700">Open</text>
+	<text data-for="st-open" class="ui white" x="540" y="98" font-size="11">external URL shown</text>
+	<text data-for="st-open" class="ui white" x="540" y="114" font-size="11">lease 2 min to 1 h</text>
+
+	<rect id="st-fail" data-box="" class="engine" x="264" y="216" width="180" height="72" rx="10"/>
+	<text data-for="st-fail" class="ui red-ink" x="280" y="244" font-size="13" font-weight="700">Failed</text>
+	<text data-for="st-fail" class="mono red-ink" x="280" y="264" font-size="11">Diagnostic</text>
+
+	<rect id="st-remove" data-box="" class="card" x="524" y="216" width="180" height="72" rx="10"/>
+	<text data-for="st-remove" class="ui ink" x="540" y="244" font-size="13" font-weight="700">Removing</text>
+	<text data-for="st-remove" class="mono muted" x="540" y="264" font-size="11">remove(), 8 s cap</text>
+
+	<!-- Transitions -->
+	<use data-line="" href="#p-start" class="wire" marker-end="url(#arr)"/>
+	<text class="ui muted" x="224" y="82" font-size="11" text-anchor="middle">switch on</text>
+	<use data-line="" href="#p-mapped" class="wire" marker-end="url(#arr)"/>
+	<text class="ui muted" x="484" y="82" font-size="11" text-anchor="middle">mapped</text>
+	<use data-line="" href="#p-renew" class="wire" marker-end="url(#arr)"/>
+	<text class="ui muted" x="656" y="34" font-size="11">renew at half the lease</text>
+	<use data-line="" href="#p-fail" class="wire soft" marker-end="url(#arr)"/>
+	<text class="ui muted" x="364" y="176" font-size="11">no mapping</text>
+	<use data-line="" href="#p-stop" class="wire" marker-end="url(#arr)"/>
+	<text class="ui muted" x="624" y="176" font-size="11">stop, quit, signal</text>
+	<path data-line="" class="wire" d="M354 288 V 312"/>
+	<path data-line="" class="wire" d="M614 288 V 312 H 104 V 130" marker-end="url(#arr)"/>
+	<text class="ui muted" x="124" y="330" font-size="11">mapping removed, back to Off (also on stop after a failure)</text>
+
+	<!-- While mapping -->
+	<rect id="steps" data-box="" class="panel" x="24" y="348" width="420" height="176" rx="14"/>
+	<text data-for="steps" class="ui muted" x="40" y="370" font-size="11" font-weight="700" letter-spacing="1">WHILE MAPPING</text>
+	<rect id="s1" data-box="" class="card" x="40" y="380" width="388" height="24" rx="6"/>
+	<text data-for="s1" class="ui ink" x="52" y="396" font-size="11">1  Public address lookup, if allowed</text>
+	<rect id="s2" data-box="" class="card" x="40" y="408" width="388" height="24" rx="6"/>
+	<text data-for="s2" class="ui ink" x="52" y="424" font-size="11">2  Remove stale “Mailslot” mappings</text>
+	<rect id="s3" data-box="" class="card" x="40" y="436" width="388" height="24" rx="6"/>
+	<text data-for="s3" class="ui ink" x="52" y="452" font-size="11">3  SSDP search (4 s), AddPortMapping TCP</text>
+	<rect id="s4" data-box="" class="card" x="40" y="464" width="388" height="24" rx="6"/>
+	<text data-for="s4" class="ui muted" x="52" y="480" font-size="11">If the port is taken: any free external port</text>
+	<rect id="s5" data-box="" class="card" x="40" y="492" width="388" height="24" rx="6"/>
+	<text data-for="s5" class="ui muted" x="52" y="508" font-size="11">If UPnP fails: PCP, then NAT-PMP</text>
+
+	<!-- Diagnostics -->
+	<rect id="diag" data-box="" class="panel" x="484" y="348" width="452" height="176" rx="14"/>
+	<text data-for="diag" class="ui muted" x="500" y="370" font-size="11" font-weight="700" letter-spacing="1">FAILED</text>
+	<text data-for="diag" class="ui muted" x="716" y="370" font-size="11" font-weight="700" letter-spacing="1">OPEN, WITH A WARNING</text>
+	<rect id="d1" data-box="" class="card" x="500" y="380" width="204" height="40" rx="6"/>
+	<text data-for="d1" class="mono ink" x="510" y="396" font-size="11">NoGateway</text>
+	<text data-for="d1" class="ui muted" x="510" y="412" font-size="11">no router answered</text>
+	<rect id="d2" data-box="" class="card" x="500" y="426" width="204" height="40" rx="6"/>
+	<text data-for="d2" class="mono ink" x="510" y="442" font-size="11">MappingRefused</text>
+	<text data-for="d2" class="ui muted" x="510" y="458" font-size="11">UPnP off, permanent only</text>
+	<rect id="d3" data-box="" class="card" x="500" y="472" width="204" height="40" rx="6"/>
+	<text data-for="d3" class="mono ink" x="510" y="488" font-size="11">PortConflict</text>
+	<text data-for="d3" class="ui muted" x="510" y="504" font-size="11">port taken, no other</text>
+	<rect id="d4" data-box="" class="card" x="716" y="380" width="204" height="40" rx="6"/>
+	<text data-for="d4" class="mono ink" x="726" y="396" font-size="11">Cgnat</text>
+	<text data-for="d4" class="ui muted" x="726" y="412" font-size="11">WAN in 100.64.0.0/10</text>
+	<rect id="d5" data-box="" class="card" x="716" y="426" width="204" height="40" rx="6"/>
+	<text data-for="d5" class="mono ink" x="726" y="442" font-size="11">DoubleNat</text>
+	<text data-for="d5" class="ui muted" x="726" y="458" font-size="11">WAN address is private</text>
+	<rect id="d6" data-box="" class="card" x="716" y="472" width="204" height="40" rx="6"/>
+	<text data-for="d6" class="mono ink" x="726" y="488" font-size="11">AddressMismatch</text>
+	<text data-for="d6" class="ui muted" x="726" y="504" font-size="11">WAN differs from lookup</text>
+
+	<!-- Motion: one session from switch-on to removal -->
+	<g class="motion">
+		<rect class="ring" x="24" y="56" width="160" height="72" rx="10" opacity="1">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.0833;0.1;0.95;0.9667;1" values="1;1;0;0;1;1"/>
+		</rect>
+		<rect class="ring" x="264" y="56" width="180" height="72" rx="10" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.13;0.145;0.36;0.375;1" values="0;0;1;1;0;0"/>
+		</rect>
+		<rect class="ring" x="521" y="53" width="186" height="78" rx="12" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.41;0.425;0.745;0.76;1" values="0;0;1;1;0;0"/>
+		</rect>
+		<rect class="ring" x="524" y="216" width="180" height="72" rx="10" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.795;0.81;0.875;0.89;1" values="0;0;1;1;0;0"/>
+		</rect>
+		<rect class="ring" x="40" y="380" width="388" height="24" rx="6" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.145;0.16;0.185;0.195;1" values="0;0;1;1;0;0"/>
+		</rect>
+		<rect class="ring" x="40" y="408" width="388" height="24" rx="6" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.195;0.21;0.23;0.24;1" values="0;0;1;1;0;0"/>
+		</rect>
+		<rect class="ring" x="40" y="436" width="388" height="24" rx="6" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.24;0.255;0.36;0.375;1" values="0;0;1;1;0;0"/>
+		</rect>
+		<rect class="warn" x="716" y="380" width="204" height="40" rx="6" opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.425;0.44;0.735;0.75;1" values="0;0;1;1;0;0"/>
+		</rect>
+
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.08;0.0833;0.1333;0.14;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.0833;0.1333;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-start"/></animateMotion>
+			<use href="#token"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.3633;0.3667;0.4167;0.4233;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.3667;0.4167;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-mapped"/></animateMotion>
+			<use href="#token"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.4967;0.5;0.5667;0.5733;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;0.5667;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-renew"/></animateMotion>
+			<use href="#token"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.63;0.6333;0.7;0.7067;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.6333;0.7;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-renew"/></animateMotion>
+			<use href="#token"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.7467;0.75;0.8;0.8067;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.75;0.8;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-stop"/></animateMotion>
+			<use href="#token"/>
+		</g>
+		<g opacity="0">
+			<animate attributeName="opacity" dur="12s" repeatCount="indefinite" keyTimes="0;0.88;0.8833;0.9667;0.9733;1" values="0;0;1;1;0;0"/>
+			<animateMotion dur="12s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.8833;0.9667;1" keyPoints="0;0;1;1" keySplines="0 0 1 1;0.4 0 0.2 1;0 0 1 1"><mpath href="#p-back"/></animateMotion>
+			<use href="#token"/>
+		</g>
+	</g>
+
+	<!-- Still frame for reduced motion: an open mapping with a carrier-grade NAT warning -->
+	<g class="static">
+		<rect class="ring" x="521" y="53" width="186" height="78" rx="12"/>
+		<rect class="warn" x="716" y="380" width="204" height="40" rx="6"/>
+	</g>
+</svg>
