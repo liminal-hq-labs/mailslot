@@ -1034,3 +1034,45 @@ async fn curl_upload_interop() {
 		b"from stdin"
 	);
 }
+
+#[cfg(unix)]
+#[tokio::test]
+async fn part_file_is_private_and_final_file_is_not_executable() {
+	use std::os::unix::fs::PermissionsExt;
+	use tokio::io::AsyncReadExt;
+
+	let f = Fixture::start().await;
+	let mut s = tokio::net::TcpStream::connect(f.addr).await.unwrap();
+	let head = format!(
+		"PUT /{}/mode.bin HTTP/1.1\r\nHost: x\r\nContent-Length: 2000\r\nConnection: close\r\n\r\n",
+		f.token.expose()
+	);
+	s.write_all(head.as_bytes()).await.unwrap();
+	s.write_all(&[1u8; 1000]).await.unwrap();
+	s.flush().await.unwrap();
+	// Mid-stream: the temporary file exists and is readable only by its owner.
+	for _ in 0..100 {
+		if !f.parts().is_empty() {
+			break;
+		}
+		tokio::time::sleep(Duration::from_millis(20)).await;
+	}
+	let parts = f.parts();
+	assert_eq!(parts.len(), 1, "{parts:?}");
+	let mode = std::fs::metadata(f.dest().join(&parts[0]))
+		.unwrap()
+		.permissions()
+		.mode();
+	assert_eq!(mode & 0o777, 0o600, "part mode is {mode:o}");
+
+	s.write_all(&[1u8; 1000]).await.unwrap();
+	let mut resp = String::new();
+	s.read_to_string(&mut resp).await.unwrap();
+	assert!(resp.starts_with("HTTP/1.1 201"), "{resp}");
+	let mode = std::fs::metadata(f.dest().join("mode.bin"))
+		.unwrap()
+		.permissions()
+		.mode();
+	assert_eq!(mode & 0o777, 0o644, "final mode is {mode:o}");
+	assert_eq!(mode & 0o111, 0, "no execute bits");
+}

@@ -239,7 +239,7 @@ async fn open_part(
 	}
 	#[cfg(unix)]
 	{
-		o.mode(0o644);
+		o.mode(0o600);
 		o.custom_flags(rustix::fs::OFlags::NOFOLLOW.bits() as i32);
 	}
 	o.open(path).await
@@ -637,6 +637,20 @@ pub(super) async fn put(
 		return attempt
 			.fail(StatusCode::INTERNAL_SERVER_ERROR, "could not create folder")
 			.await;
+	}
+	// The partial file is private (0600) while it is being written. It becomes world-readable
+	// (0644, never executable) only now, just before it is claimed under its final name.
+	#[cfg(unix)]
+	{
+		use std::os::unix::fs::PermissionsExt;
+		if tokio::fs::set_permissions(&part, std::fs::Permissions::from_mode(0o644))
+			.await
+			.is_err()
+		{
+			return attempt
+				.fail(StatusCode::INTERNAL_SERVER_ERROR, "could not save file")
+				.await;
+		}
 	}
 	let mut saved: Option<(PathBuf, String)> = None;
 	for n in 0..10_000u32 {

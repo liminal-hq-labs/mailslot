@@ -214,12 +214,19 @@ impl Default for Security {
 	}
 }
 
+/// The shortest router mapping lease, in minutes.
+pub const UPNP_LEASE_MIN_MINUTES: u32 = 5;
+/// The longest router mapping lease, in minutes. Mappings are never permanent.
+pub const UPNP_LEASE_MAX_MINUTES: u32 = 60;
+
 /// Network settings.
-#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Network {
 	/// Open the port on the router with UPnP while sharing (remembered between sessions).
 	pub upnp: bool,
+	/// Router mapping lease in minutes, from 5 to 60. It is also capped by the link expiry.
+	pub upnp_lease_minutes: u32,
 	/// Allow the public-IP lookup button to make one request.
 	pub public_ip_lookup: bool,
 	/// Interface (name or address) to advertise in the link; empty means automatic.
@@ -227,6 +234,28 @@ pub struct Network {
 	/// Announce this share on the local network with mDNS while sharing. The secret is
 	/// never part of the announcement.
 	pub mdns: bool,
+}
+
+impl Default for Network {
+	fn default() -> Self {
+		Self {
+			upnp: false,
+			upnp_lease_minutes: UPNP_LEASE_MAX_MINUTES,
+			public_ip_lookup: false,
+			interface: String::new(),
+			mdns: false,
+		}
+	}
+}
+
+impl Network {
+	/// The mapping lease, with the configured minutes held inside the allowed range.
+	pub fn upnp_lease(&self) -> std::time::Duration {
+		let m = self
+			.upnp_lease_minutes
+			.clamp(UPNP_LEASE_MIN_MINUTES, UPNP_LEASE_MAX_MINUTES);
+		std::time::Duration::from_secs(u64::from(m) * 60)
+	}
 }
 
 /// Notification and history settings.
@@ -322,6 +351,13 @@ impl Config {
 				"maximum file size must be at least 1 MB".into(),
 			));
 		}
+		if !(UPNP_LEASE_MIN_MINUTES..=UPNP_LEASE_MAX_MINUTES)
+			.contains(&self.network.upnp_lease_minutes)
+		{
+			return Err(Error::InvalidConfig(format!(
+				"the UPnP lease must be between {UPNP_LEASE_MIN_MINUTES} and {UPNP_LEASE_MAX_MINUTES} minutes"
+			)));
+		}
 		Ok(())
 	}
 
@@ -404,6 +440,33 @@ mod tests {
 		assert!(c.notifications.keep_history);
 		assert_eq!(c.notifications.history_days, 90);
 		assert!(!c.network.upnp && !c.network.public_ip_lookup);
+		assert_eq!(c.network.upnp_lease_minutes, 60);
+	}
+
+	#[test]
+	fn upnp_lease_is_validated_clamped_and_reset() {
+		let mut c = Config::default();
+		assert_eq!(c.network.upnp_lease(), std::time::Duration::from_secs(3600));
+		for bad in [0, 4, 61, 1000] {
+			c.network.upnp_lease_minutes = bad;
+			assert!(c.validate().is_err(), "{bad} should be refused");
+		}
+		for ok in [5, 30, 60] {
+			c.network.upnp_lease_minutes = ok;
+			assert!(c.validate().is_ok(), "{ok} should be accepted");
+		}
+		// A hand-edited file outside the range is held inside it when used.
+		let c = Config::from_toml("[network]\nupnp_lease_minutes = 600\n").unwrap();
+		assert_eq!(c.network.upnp_lease(), std::time::Duration::from_secs(3600));
+		let c = Config::from_toml("[network]\nupnp_lease_minutes = 1\n").unwrap();
+		assert_eq!(c.network.upnp_lease(), std::time::Duration::from_secs(300));
+		// It round-trips through TOML and resets with its section.
+		let mut c = Config::default();
+		c.network.upnp_lease_minutes = 15;
+		let back = Config::from_toml(&c.to_toml()).unwrap();
+		assert_eq!(back.network.upnp_lease_minutes, 15);
+		c.reset_section(Section::Network);
+		assert_eq!(c.network.upnp_lease_minutes, 60);
 	}
 
 	#[test]
