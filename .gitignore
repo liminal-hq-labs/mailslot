@@ -1,0 +1,13 @@
+# Planning notes (kept local; decisions live in docs/decisions.md)
+/PLAN.md
+/PLAN-base.md
+
+# Build output
+/target/
+/.dev-uploads/
+*.part
+
+# Packaging output
+/dist/
+/build-aux/flatpak/repo/
+/build-aux/flatpak/.flatpak-builder/
