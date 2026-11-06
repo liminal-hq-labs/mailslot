@@ -1,0 +1,15 @@
+# Files with translatable strings, one per line. scripts/make-pot.sh fails if a file that uses
+# gettext or has translatable UI strings is missing here.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+crates/mailslot-gtk/src/application.rs
+crates/mailslot-gtk/src/bridge.rs
+crates/mailslot-gtk/src/preferences.rs
+crates/mailslot-gtk/src/widgets/upload_row.rs
+crates/mailslot-gtk/src/window.rs
+crates/mailslot-gtk/resources/ui/upload_row.ui
+crates/mailslot-gtk/resources/ui/window.ui
+data/ca.liminalhq.mailslot.desktop
+data/ca.liminalhq.mailslot.metainfo.xml

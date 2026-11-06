@@ -21,9 +21,14 @@ deb)
 		apt-get install -y -qq /dist/mailslot_*.deb
 		mailslot --version
 		mailslot-cli --version
+		if command -v mailslotd >/dev/null; then
+			mailslotd --version
+			test -f /usr/lib/systemd/user/mailslotd.service
+		fi
 		apt-get purge -y -qq mailslot
 		apt-get install -y -qq /dist/mailslot-cli_*.deb
 		mailslot-cli --version
+		hash -r
 		! command -v mailslot
 	'
 	;;
@@ -32,9 +37,14 @@ rpm)
 		dnf -y -q install /dist/mailslot-[0-9]*.rpm
 		mailslot --version
 		mailslot-cli --version
+		if command -v mailslotd >/dev/null; then
+			mailslotd --version
+			test -f /usr/lib/systemd/user/mailslotd.service
+		fi
 		dnf -y -q remove mailslot
 		dnf -y -q install /dist/mailslot-cli-*.rpm
 		mailslot-cli --version
+		hash -r
 		! command -v mailslot
 	'
 	;;

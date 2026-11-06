@@ -1,0 +1,709 @@
+# English translations for mailslot package.
+# Copyright (C) 2026 THE mailslot'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the mailslot package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: mailslot\n"
+"Report-Msgid-Bugs-To: https://github.com/liminal-hq/mailslot/issues\n"
+"POT-Creation-Date: 2026-11-06 18:09+0000\n"
+"PO-Revision-Date: 2026-11-06 18:09+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: en_CA\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "0 means never"
+msgstr "0 means never"
+
+msgid "0 means no limit"
+msgstr "0 means no limit"
+
+msgid "0 means no limit; 1 is one-shot mode"
+msgstr "0 means no limit; 1 is one-shot mode"
+
+msgid "0 means no quota"
+msgstr "0 means no quota"
+
+msgid "0 means no timer"
+msgstr "0 means no timer"
+
+msgid "0 picks a free port"
+msgstr "0 picks a free port"
+
+#, rust-format
+msgid ""
+"1. Open your router's admin page (often the gateway address, such as "
+"192.168.1.1).\n"
+"2. Find Port Forwarding (sometimes called Virtual Servers or NAT).\n"
+"3. Forward TCP port {} to this computer's local address.\n"
+"4. Share the internet link, using your public address in place of the local "
+"one.\n"
+"5. Remove the forward when you are done."
+msgstr ""
+"1. Open your router's admin page (often the gateway address, such as "
+"192.168.1.1).\n"
+"2. Find Port Forwarding (sometimes called Virtual Servers or NAT).\n"
+"3. Forward TCP port {} to this computer's local address.\n"
+"4. Share the internet link, using your public address in place of the local "
+"one.\n"
+"5. Remove the forward when you are done."
+
+msgid ""
+"A private file drop. Share a secret link and receive files; nothing is ever "
+"served back."
+msgstr ""
+"A private file drop. Share a secret link and receive files; nothing is ever "
+"served back."
+
+msgid ""
+"A self-signed certificate; senders verify it with a key pin shown in the link"
+msgstr ""
+"A self-signed certificate; senders verify it with a key pin shown in the link"
+
+msgid "A stalled upload is dropped after this long"
+msgstr "A stalled upload is dropped after this long"
+
+msgid "Add a number"
+msgstr "Add a number"
+
+msgid "Address"
+msgstr "Address"
+
+msgid "Allow public address lookup"
+msgstr "Allow public address lookup"
+
+msgid "Allowed file types"
+msgstr "Allowed file types"
+
+msgid "Already on the other side, nothing sent"
+msgstr "Already on the other side, nothing sent"
+
+msgid "Asking your router…"
+msgstr "Asking your router…"
+
+msgid ""
+"Asks your router to forward the port while you share. You are asked to "
+"confirm each session."
+msgstr ""
+"Asks your router to forward the port while you share. You are asked to "
+"confirm each session."
+
+msgid ""
+"Asks your router to forward the port with UPnP while you share. Off by "
+"default."
+msgstr ""
+"Asks your router to forward the port with UPnP while you share. Off by "
+"default."
+
+msgid "Auto-stop after (minutes)"
+msgstr "Auto-stop after (minutes)"
+
+msgid "Auto-stop timer reached, so sharing stopped"
+msgstr "Auto-stop timer reached, so sharing stopped"
+
+msgid "Bind address"
+msgstr "Bind address"
+
+msgid "By date"
+msgstr "By date"
+
+msgid "By sender label"
+msgstr "By sender label"
+
+#, rust-format
+msgid "Cannot write to {}. Choose another folder in Preferences."
+msgstr "Cannot write to {}. Choose another folder in Preferences."
+
+msgid ""
+"Changes to the port or address take effect the next time you start sharing."
+msgstr ""
+"Changes to the port or address take effect the next time you start sharing."
+
+#, rust-format
+msgid "Checking {}…"
+msgstr "Checking {}…"
+
+msgid "Choose a folder"
+msgstr "Choose a folder"
+
+msgid "Choose a folder to send"
+msgstr "Choose a folder to send"
+
+msgid "Choose a folder…"
+msgstr "Choose a folder…"
+
+msgid "Choose files to send"
+msgstr "Choose files to send"
+
+msgid "Choose files…"
+msgstr "Choose files…"
+
+msgid "Choose the destination folder"
+msgstr "Choose the destination folder"
+
+msgid "Clear History"
+msgstr "Clear History"
+
+msgid "Clear finished"
+msgstr "Clear finished"
+
+msgid "Clear history"
+msgstr "Clear history"
+
+msgid "Copied"
+msgstr "Copied"
+
+msgid "Copy SHA-256"
+msgstr "Copy SHA-256"
+
+msgid "Copy a ready-made command or prompt"
+msgstr "Copy a ready-made command or prompt"
+
+msgid "Copy internet link"
+msgstr "Copy internet link"
+
+msgid "Copy link"
+msgstr "Copy link"
+
+msgid "Copy link (Ctrl+Shift+C)"
+msgstr "Copy link (Ctrl+Shift+C)"
+
+msgid "Could not open the port"
+msgstr "Could not open the port"
+
+msgid "Could not reach that link"
+msgstr "Could not reach that link"
+
+msgid "Destination"
+msgstr "Destination"
+
+msgid "Destination folder"
+msgstr "Destination folder"
+
+msgid "Drop link"
+msgstr "Drop link"
+
+msgid "Expires"
+msgstr "Expires"
+
+msgid "Failed"
+msgstr "Failed"
+
+msgid "File Drop"
+msgstr "File Drop"
+
+msgid "File limit reached, so sharing stopped"
+msgstr "File limit reached, so sharing stopped"
+
+msgid "File received"
+msgstr "File received"
+
+msgid "Files can no longer be sent to your link once Mailslot closes."
+msgstr "Files can no longer be sent to your link once Mailslot closes."
+
+msgid "Files you receive and send appear here."
+msgstr "Files you receive and send appear here."
+
+msgid "Forward the port yourself"
+msgstr "Forward the port yourself"
+
+msgid "General"
+msgstr "General"
+
+msgid "History"
+msgstr "History"
+
+msgid "Idle timeout (seconds)"
+msgstr "Idle timeout (seconds)"
+
+msgid "If a file name exists"
+msgstr "If a file name exists"
+
+#, rust-format
+msgid "In under a minute (at {})"
+msgstr "In under a minute (at {})"
+
+#, rust-format
+msgid "In {} (at {})"
+msgstr "In {} (at {})"
+
+msgid "Incoming"
+msgstr "Incoming"
+
+msgid "Internet"
+msgstr "Internet"
+
+msgid "Internet link"
+msgstr "Internet link"
+
+msgid "Internet link copied"
+msgstr "Internet link copied"
+
+msgid "Internet-exposed"
+msgstr "Internet-exposed"
+
+msgid "Keep a history"
+msgstr "Keep a history"
+
+msgid "Keep history for (days)"
+msgstr "Keep history for (days)"
+
+msgid "Keep this much disk free (MB)"
+msgstr "Keep this much disk free (MB)"
+
+msgid "Keyboard shortcuts"
+msgstr "Keyboard shortcuts"
+
+msgid "Largest file (MB)"
+msgstr "Largest file (MB)"
+
+msgid "Limit how long and how much a link can be used."
+msgstr "Limit how long and how much a link can be used."
+
+msgid "Limits"
+msgstr "Limits"
+
+msgid "Link"
+msgstr "Link"
+
+msgid "Link copied"
+msgstr "Link copied"
+
+msgid "Link expires after (minutes)"
+msgstr "Link expires after (minutes)"
+
+msgid "Lock out after bad links"
+msgstr "Lock out after bad links"
+
+msgid "Mailslot"
+msgstr "Mailslot"
+
+msgid "Mailslot could not start"
+msgstr "Mailslot could not start"
+
+msgid ""
+"Mailslot is not allowed to listen on that port. Choose a port above 1024 in "
+"Preferences."
+msgstr ""
+"Mailslot is not allowed to listen on that port. Choose a port above 1024 in "
+"Preferences."
+
+msgid "Main menu"
+msgstr "Main menu"
+
+msgid "Make a New Link…"
+msgstr "Make a New Link…"
+
+msgid "Make a new link"
+msgstr "Make a new link"
+
+msgid "Make a new link; the old one stops working"
+msgstr "Make a new link; the old one stops working"
+
+msgid "Make a new link?"
+msgstr "Make a new link?"
+
+msgid "Makes one request to a public service to check for double NAT"
+msgstr "Makes one request to a public service to check for double NAT"
+
+msgid "Manual Steps"
+msgstr "Manual Steps"
+
+msgid "Mark programs and scripts as risky to open"
+msgstr "Mark programs and scripts as risky to open"
+
+msgid "Names, sizes and checksums of files sent and received; never the link"
+msgstr "Names, sizes and checksums of files sent and received; never the link"
+
+msgid "Network"
+msgstr "Network"
+
+msgid "Never"
+msgstr "Never"
+
+msgid "New link ready. The old one no longer works."
+msgstr "New link ready. The old one no longer works."
+
+msgid "No history yet"
+msgstr "No history yet"
+
+msgid "None"
+msgstr "None"
+
+msgid "Not sharing"
+msgstr "Not sharing"
+
+msgid "Nothing sent yet"
+msgstr "Nothing sent yet"
+
+msgid "Nothing to send"
+msgstr "Nothing to send"
+
+msgid "Notifications"
+msgstr "Notifications"
+
+msgid "Notify when a file arrives"
+msgstr "Notify when a file arrives"
+
+msgid "Open"
+msgstr "Open"
+
+msgid "Open Mailslot to see them"
+msgstr "Open Mailslot to see them"
+
+msgid "Open to the internet"
+msgstr "Open to the internet"
+
+msgid "Open to the internet with UPnP"
+msgstr "Open to the internet with UPnP"
+
+msgid "Open to the internet?"
+msgstr "Open to the internet?"
+
+msgid "Opening this file may run code"
+msgstr "Opening this file may run code"
+
+msgid "Paste a link first"
+msgstr "Paste a link first"
+
+msgid "Paste a link from the clipboard"
+msgstr "Paste a link from the clipboard"
+
+msgid ""
+"Paste a link someone gave you, then choose what to send. Uploads resume if "
+"the connection drops, and files the other side already has are skipped."
+msgstr ""
+"Paste a link someone gave you, then choose what to send. Uploads resume if "
+"the connection drops, and files the other side already has are skipped."
+
+msgid "Paste a link to begin"
+msgstr "Paste a link to begin"
+
+msgid "Port"
+msgstr "Port"
+
+#, rust-format
+msgid "Port {} is already in use by another program."
+msgstr "Port {} is already in use by another program."
+
+msgid "Port-forward instructions…"
+msgstr "Port-forward instructions…"
+
+msgid "PowerShell command"
+msgstr "PowerShell command"
+
+msgid "Preferences"
+msgstr "Preferences"
+
+msgid "Preferred interface or address"
+msgstr "Preferred interface or address"
+
+msgid "Prompt for an AI agent"
+msgstr "Prompt for an AI agent"
+
+msgid "QR code for the mailslot link"
+msgstr "QR code for the mailslot link"
+
+msgid "Quit"
+msgstr "Quit"
+
+msgid "Reachability"
+msgstr "Reachability"
+
+msgid "Read each file back from disk and check its hash"
+msgstr "Read each file back from disk and check its hash"
+
+msgid "Receive and send files through a private link"
+msgstr "Receive and send files through a private link"
+
+msgid "Received"
+msgstr "Received"
+
+msgid "Received files"
+msgstr "Received files"
+
+#, rust-format
+msgid "Received · {}"
+msgstr "Received · {}"
+
+msgid "Refuse the upload"
+msgstr "Refuse the upload"
+
+msgid "Requests per minute per sender"
+msgstr "Requests per minute per sender"
+
+msgid "Reset to Defaults"
+msgstr "Reset to Defaults"
+
+msgid "Restart"
+msgstr "Restart"
+
+#, rust-format
+msgid "Retrying (attempt {})"
+msgstr "Retrying (attempt {})"
+
+msgid "SHA-256 copied"
+msgstr "SHA-256 copied"
+
+msgid "Save a checksum file beside each received file"
+msgstr "Save a checksum file beside each received file"
+
+#, rust-format
+msgid "Saved as {} · {}"
+msgstr "Saved as {} · {}"
+
+#, rust-format
+msgid "Saving to {}"
+msgstr "Saving to {}"
+
+msgid "Secret"
+msgstr "Secret"
+
+msgid "Security"
+msgstr "Security"
+
+msgid "Send"
+msgstr "Send"
+
+msgid "Send to another Mailslot"
+msgstr "Send to another Mailslot"
+
+msgid "Sending"
+msgstr "Sending"
+
+msgid "Sent"
+msgstr "Sent"
+
+#, rust-format
+msgid "Sent · {}"
+msgstr "Sent · {}"
+
+msgid "Session quota (MB)"
+msgstr "Session quota (MB)"
+
+msgid "Session rules"
+msgstr "Session rules"
+
+msgid "Settings changed. Restart sharing to apply them."
+msgstr "Settings changed. Restart sharing to apply them."
+
+msgid "Share"
+msgstr "Share"
+
+msgid "Share this link with the sender. Anyone who has it can upload."
+msgstr "Share this link with the sender. Anyone who has it can upload."
+
+msgid "Sharing"
+msgstr "Sharing"
+
+msgid "Sharing stopped"
+msgstr "Sharing stopped"
+
+msgid "Show in Folder"
+msgstr "Show in Folder"
+
+msgid "Show in folder"
+msgstr "Show in folder"
+
+msgid "Show or hide the secret"
+msgstr "Show or hide the secret"
+
+msgid "Start or stop sharing"
+msgstr "Start or stop sharing"
+
+msgid "Start or stop sharing (Ctrl+Shift+S)"
+msgstr "Start or stop sharing (Ctrl+Shift+S)"
+
+msgid "Start sharing"
+msgstr "Start sharing"
+
+msgid "Start sharing first"
+msgstr "Start sharing first"
+
+msgid "Start sharing on launch"
+msgstr "Start sharing on launch"
+
+msgid ""
+"Start sharing to get a private link. Anyone with the link can send you "
+"files; nothing is ever served back."
+msgstr ""
+"Start sharing to get a private link. Anyone with the link can send you "
+"files; nothing is ever served back."
+
+msgid "Stop after this many files"
+msgstr "Stop after this many files"
+
+msgid "Stop sharing"
+msgstr "Stop sharing"
+
+msgid "Stop sharing and quit?"
+msgstr "Stop sharing and quit?"
+
+msgid "Storage"
+msgstr "Storage"
+
+msgid "Subfolders"
+msgstr "Subfolders"
+
+msgid "That is not a Mailslot link"
+msgstr "That is not a Mailslot link"
+
+msgid ""
+"The current link stops working immediately and uploads in progress are "
+"cancelled."
+msgstr ""
+"The current link stops working immediately and uploads in progress are "
+"cancelled."
+
+msgid "The link expired, so sharing stopped"
+msgstr "The link expired, so sharing stopped"
+
+msgid "The network address used in the link"
+msgstr "The network address used in the link"
+
+msgid "The other side is not accepting files right now"
+msgstr "The other side is not accepting files right now"
+
+msgid "The port is open on your router for this session"
+msgstr "The port is open on your router for this session"
+
+msgid "The port is open on your router. Click to stop."
+msgstr "The port is open on your router. Click to stop."
+
+msgid "This computer (127.0.0.1)"
+msgstr "This computer (127.0.0.1)"
+
+msgid "Uploads"
+msgstr "Uploads"
+
+msgid "Uploads at once"
+msgstr "Uploads at once"
+
+msgid "Uploads that would go below this are refused"
+msgstr "Uploads that would go below this are refused"
+
+msgid "Use HTTPS"
+msgstr "Use HTTPS"
+
+#, rust-format
+msgid "Use Port {}"
+msgstr "Use Port {}"
+
+msgid "Verify after saving"
+msgstr "Verify after saving"
+
+msgid "Waiting for files…"
+msgstr "Waiting for files…"
+
+msgid "Warn about executables"
+msgstr "Warn about executables"
+
+msgid "Write .sha256 files"
+msgstr "Write .sha256 files"
+
+msgid ""
+"Wrong-link requests from one address before it is blocked for ten minutes; 0 "
+"turns this off"
+msgstr ""
+"Wrong-link requests from one address before it is blocked for ten minutes; 0 "
+"turns this off"
+
+msgid ""
+"Your router will forward this port to this computer for the current session, "
+"and anyone on the internet who has the link can send you files. The mapping "
+"is time-limited and removed when you stop sharing."
+msgstr ""
+"Your router will forward this port to this computer for the current session, "
+"and anyone on the internet who has the link can send you files. The mapping "
+"is time-limited and removed when you stop sharing."
+
+msgid "_About Mailslot"
+msgstr "_About Mailslot"
+
+msgid "_Cancel"
+msgstr "_Cancel"
+
+msgid "_Close"
+msgstr "_Close"
+
+msgid "_Keep Sharing"
+msgstr "_Keep Sharing"
+
+msgid "_Keyboard Shortcuts"
+msgstr "_Keyboard Shortcuts"
+
+msgid "_New Link"
+msgstr "_New Link"
+
+msgid "_Open Port"
+msgstr "_Open Port"
+
+msgid "_Preferences"
+msgstr "_Preferences"
+
+msgid "_Quit"
+msgstr "_Quit"
+
+msgid "_Stop and Quit"
+msgstr "_Stop and Quit"
+
+msgid "curl command"
+msgstr "curl command"
+
+msgid "file;transfer;upload;share;drop;send;receive;sync;qr;"
+msgstr "file;transfer;upload;share;drop;send;receive;sync;qr;"
+
+msgid "mailslot-cli command"
+msgstr "mailslot-cli command"
+
+msgid "wget command"
+msgstr "wget command"
+
+#, rust-format
+msgid "{} file received"
+msgid_plural "{} files received"
+msgstr[0] "{} file received"
+msgstr[1] "{} files received"
+
+#, rust-format
+msgid "{} h {} min"
+msgstr "{} h {} min"
+
+#, rust-format
+msgid "{} is ready · up to {} per file"
+msgstr "{} is ready · up to {} per file"
+
+#, rust-format
+msgid "{} left"
+msgstr "{} left"
+
+#, rust-format
+msgid "{} min"
+msgstr "{} min"
+
+#, rust-format
+msgid "{} minute"
+msgid_plural "{} minutes"
+msgstr[0] "{} minute"
+msgstr[1] "{} minutes"
+
+#, rust-format
+msgid "{} of {} · {}"
+msgstr "{} of {} · {}"
+
+#, rust-format
+msgid "{} received"
+msgstr "{} received"
+
+#, rust-format
+msgid "{} s"
+msgstr "{} s"
+
+#, rust-format
+msgid "{}/s"
+msgstr "{}/s"

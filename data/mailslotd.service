@@ -1,0 +1,28 @@
+# systemd user unit for mailslotd, the headless Mailslot daemon.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+[Unit]
+Description=Mailslot daemon
+Documentation=https://github.com/liminal-hq/mailslot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/mailslotd
+Restart=on-failure
+RestartSec=3
+# The daemon removes its UPnP port mapping on SIGTERM, so give it time to do that.
+TimeoutStopSec=15
+NoNewPrivileges=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=default.target

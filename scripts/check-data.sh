@@ -36,6 +36,7 @@ for icon in data/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg data/icon
 	step "renders $icon" rsvg-convert -w 64 "$icon" -o "$tmp/icon.png"
 done
 
+step "mailslotd.service names the installed binary" grep -qx 'ExecStart=/usr/bin/mailslotd' data/mailslotd.service
 step "banner" bash scripts/check-banner.sh
 step "bash completion syntax" bash -n data/completions/mailslot-cli.bash
 if command -v zsh >/dev/null 2>&1; then

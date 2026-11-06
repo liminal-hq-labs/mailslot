@@ -87,8 +87,9 @@ actionlint: ## actionlint on the workflows
 	docker run --rm -v "$(CURDIR):/repo" -w /repo $(ACTIONLINT_IMAGE) -color
 
 .PHONY: docs-lint
-docs-lint: ## markdownlint on every Markdown file
-	docker run --rm -v "$(CURDIR):/workspace" -w /workspace $(MARKDOWNLINT_IMAGE) "**/*.md" "#target" "#node_modules"
+docs-lint: ## markdownlint on every tracked or new Markdown file (git-ignored files are skipped)
+	files="$$(git ls-files --cached --others --exclude-standard '*.md')"; \
+	docker run --rm -v "$(CURDIR):/workspace" -w /workspace $(MARKDOWNLINT_IMAGE) $$files
 
 .PHONY: lint
 lint: fmt-check clippy headers style shellcheck hadolint actionlint docs-lint ## Everything that checks style
@@ -105,6 +106,11 @@ test-ci: ## nextest with the ci profile (writes target/nextest/ci/junit.xml)
 test-ui: ## Display tests under headless weston (UI_BACKEND=x11 for Xvfb)
 	$(IN_IMAGE) env UI_BACKEND=$${UI_BACKEND:-wayland} bash scripts/test-ui.sh
 
+.PHONY: screenshots
+screenshots: ## Capture docs/screenshots/*.png from the UI test under headless weston
+	mkdir -p docs/screenshots
+	$(IN_IMAGE) env MAILSLOT_SCREENSHOT_DIR=/workspace/docs/screenshots bash scripts/test-ui.sh -E 'test(screenshots)'
+
 .PHONY: smoke
 smoke: ## curl and CLI round trips against a local headless server
 	$(IN_IMAGE) bash scripts/smoke.sh
@@ -116,6 +122,10 @@ upnp-test: image upnp-image ## Port mapping against miniupnpd on an isolated Doc
 .PHONY: upnp-image
 upnp-image: ## Build the miniupnpd gateway image
 	docker build --target upnp-test -t mailslot-upnp-test:local docker/
+
+.PHONY: pot
+pot: ## Regenerate po/mailslot.pot and merge it into the catalogues
+	$(IN_IMAGE) bash scripts/make-pot.sh
 
 .PHONY: deny
 deny: ## cargo deny check

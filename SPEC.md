@@ -15,6 +15,10 @@
 - [Settings](#settings)
 - [Limits](#limits)
 - [UPnP port mapping](#upnp-port-mapping)
+- [Pause and resume](#pause-and-resume)
+- [Send queue and watch](#send-queue-and-watch)
+- [Discovery on the LAN](#discovery-on-the-lan)
+- [Local IPC and mailslotd](#local-ipc-and-mailslotd)
 - [Files, paths and names](#files-paths-and-names)
 - [Sync roadmap](#sync-roadmap)
 - [Acceptance criteria](#acceptance-criteria)
@@ -46,11 +50,12 @@ It is both a server and a client. The same engine receives files in the desktop 
 |---|---|
 | `mailslot-core` | GTK-free library: `Engine`, protocol types, server, client, config, UPnP port mapping, network information |
 | `mailslot-cli` | Command-line binary: `send`, `serve`, `watch`, `pair`, `status` |
+| `mailslot-ipc` | Local JSON-RPC 2.0 server and client over a Unix socket, and the headless daemon binary `mailslotd` |
 | `mailslot` (crate `mailslot-gtk`) | GTK4 and libadwaita desktop app: Share page, Send page, Preferences, history |
 
 Identifiers are fixed across the project:
 
-- Application ID `ca.liminalhq.mailslot`, GUI binary `mailslot`, CLI binary `mailslot-cli`.
+- Application ID `ca.liminalhq.mailslot`, GUI binary `mailslot`, CLI binary `mailslot-cli`, daemon binary `mailslotd`.
 - Resource prefix `/ca/liminalhq/mailslot/`, gettext domain `mailslot`.
 - App icon name `ca.liminalhq.mailslot` and `ca.liminalhq.mailslot-symbolic`.
 
@@ -166,7 +171,7 @@ The Share page shows both the `mailslot://` link and the plain `http(s)://HOST:P
 |---|---|
 | `send [FILE…\|-] LINK` | Upload files, folders (recursively) or stdin (`--name`). Resumes, retries with backoff, sends the SHA-256 up front, skips duplicates, runs files in parallel (`--jobs`), and limits bandwidth (`--limit`). `--json` prints one JSON object per event. Exit code is non-zero if any file failed |
 | `serve` | Run a headless receiver. Prints one line `URL http://HOST:PORT/TOKEN/` to stdout once listening, then serves until SIGTERM or SIGINT |
-| `watch DIR LINK` | Push new and changed files in a folder (roadmap v1, uses the same send queue) |
+| `watch DIR LINK` | Push new and changed files in a folder as they appear, using inotify and the [send queue](#send-queue-and-watch) |
 | `pair` | Print a link and a QR code in the terminal for a running or configured receiver |
 | `status` | Show the configured receiver's state, link and recent uploads |
 
@@ -245,6 +250,7 @@ Settings live in `$XDG_CONFIG_HOME/ca.liminalhq.mailslot/config.toml`. The deskt
 | `network.upnp_lease_minutes` | `60` | Mapping lease, capped by the link expiry |
 | `network.public_ip_lookup` | `false` | Allow the one-request public address lookup |
 | `network.interface` | `"auto"` | Interface used for the displayed link |
+| `network.mdns` | `false` | Announce this receiver on the LAN with mDNS, see [Discovery on the LAN](#discovery-on-the-lan) |
 
 ### Notifications and history
 
@@ -277,6 +283,63 @@ Mailslot can ask the router to forward the sharing port so the link works from t
 - **Fallback.** When mapping fails, the Network panel shows manual port-forward instructions and a reminder to remove the forward afterwards.
 - **Testing.** The core test suite runs a fake IGD (SSDP and SOAP). `make upnp-test` runs `miniupnpd` in a Docker network. Checking a real router is manual.
 
+## Pause and resume
+
+Sharing can be paused without losing the link. While paused the server stays bound to its port, new uploads and `PUT`s get `503` with `Retry-After`, `health` reports `"accepting":false`, and uploads already in flight finish. Resume restores normal service. Pause and resume are `Engine` commands, a header-bar action in the app and IPC methods. They change no setting and do not touch the UPnP mapping, the link or its expiry.
+
+## Send queue and watch
+
+Every send goes through a queue owned by the engine. Entries record the file, the destination link, the upload id and the state (waiting, sending, done, failed). The queue is saved in the data directory and survives restarts, so interrupted transfers resume from the receiver's offset on the next start.
+
+- **Retry.** Failed uploads retry with exponential backoff and jitter, capped at five minutes. A permanent refusal (`404`, `410`, `413`, `415`) is not retried.
+- **Dedupe.** Before sending, the client asks `have?sha256=…` and skips content the receiver already holds.
+- **Watch.** `mailslot-cli watch DIR LINK` and the app's Outbox folder watch a folder with inotify, wait until a file stops changing, then queue it. Hash-based dedupe keeps unchanged files from being sent twice. Subfolders are included, and files that were present before watching started are queued once.
+- **Control.** The Send page and `mailslot-cli status` show the queue, with pause, cancel and retry per entry.
+
+## Discovery on the LAN
+
+Discovery is opt-in (`network.mdns`, off by default) and local to the link: Mailslot announces itself with mDNS only on interfaces on private addresses, so a phone or laptop can find it without typing.
+
+- **Service.** `_mailslot._tcp` on the sharing port.
+- **TXT records.** `v=1` (protocol version), `label` (the link label), `tls=1` when HTTPS is on, and `pin` with the key pin when HTTPS is on.
+- **The token is never announced.** Discovery only tells a nearby client that a receiver exists. The client still needs the link, from a QR code or the person who shared it.
+- **Clients.** The Send page and `mailslot-cli pair` list discovered receivers, and ask for the link to finish pairing.
+- **Stops with sharing.** The announcement is withdrawn on Stop, Pause and quit.
+
+## Local IPC and mailslotd
+
+`mailslot-ipc` lets a user interface in any language drive the same engine, without Rust bindings. It runs in `mailslotd`, a headless daemon, or in-process in an application that embeds it.
+
+- **Transport.** A Unix domain socket at `$XDG_RUNTIME_DIR/ca.liminalhq.mailslot/mailslotd.sock`, created with mode `0600` in a directory with mode `0700`. Only the same user can connect. The socket is never TCP, and it does not need the token.
+- **Protocol.** JSON-RPC 2.0, one JSON object per line (newline-delimited), UTF-8.
+- **Methods.** They mirror the `Engine` commands:
+
+| Method | Params | Result |
+|---|---|---|
+| `ping` | none | `"pong"` |
+| `version` | none | `{"daemon", "protocol"}` |
+| `state` | none | The engine state snapshot |
+| `start` | none | The new state |
+| `stop`, `pause`, `resume` | none | `null` |
+| `rotate_token` | none | The new state, with the new links |
+| `settings.get` | none | The full settings |
+| `settings.update` | The full settings | `null` |
+| `settings.reset` | `{"section"?}` (`sharing`, `storage`, `limits`, `security`, `network`, `notifications`) | The settings after the reset |
+| `internet.set` | `{"enabled": bool}` | `null` |
+| `send` | `{"link", "paths", "options"?}` | `{"ids": […]}` |
+| `send.cancel` | `{"id"}` | `null` |
+| `check_link` | `{"link"}` | The receiver's health |
+| `discover` | `{"timeout_secs"?}` | Nearby receivers found with mDNS |
+| `history.get`, `history.clear` | none | The history entries, or `null` |
+| `subscribe`, `unsubscribe` | none | `true` |
+| `shutdown` | none | `null`, and then the daemon exits |
+
+- **Events.** After `subscribe`, the server sends notifications `{"jsonrpc":"2.0","method":"event","params":{…}}` for every engine event. Events use serde's external tagging, for example `{"Upload":{"Finished":{…}}}`, and are the same typed events as the Rust event stream. A client renders `state` first and then applies events.
+- **Errors.** `-32700` parse error, `-32600` invalid request, `-32601` unknown method, `-32602` invalid params, and `-32000` for an engine error, with a human-readable message. Batches are not supported.
+- **Secrets.** The state snapshot contains the share links, which hold the token. The socket permissions are what protect it.
+- **Windows.** The intended transport is a named pipe, `\\.\pipe\ca.liminalhq.mailslot`. It is not implemented yet.
+- **Lifecycle.** `mailslotd` runs until SIGTERM or SIGINT, removes its UPnP mapping and its socket on exit, and can run as a systemd user service (`systemctl --user enable --now mailslotd`).
+
 ## Files, paths and names
 
 - Default destination `~/Downloads/Mailslot`, created on first start.
@@ -290,14 +353,14 @@ Mailslot can ask the router to forward the sharing port so the link works from t
 
 ## Sync roadmap
 
-The first release is manual send with dedupe and resume. Sync grows from the same protocol.
+The first release sends with dedupe, resume and a watched folder. Sync grows from the same protocol.
 
-### Version 1
+### Shipped in the first release
 
-- `mailslot-cli watch DIR LINK` and a GUI Outbox folder: push sync from a watched folder using inotify, content-hash dedupe, resume after network drops and a send queue that survives restarts.
-- Pairing by QR code or `mailslot://` link, plus opt-in mDNS discovery on the LAN so a phone or laptop finds the app without typing.
-- A per-sender subfolder option on the server, keyed by link label, and a history view of both sent and received transfers.
-- `mailslot-ipc`: a local JSON-RPC API (Unix socket or named pipe) and a headless `mailslotd`, so non-Rust interfaces drive the same engine.
+- [Send queue and watch](#send-queue-and-watch): a watched folder pushes with inotify, hash dedupe, resume after network drops and a queue that survives restarts.
+- Pairing by QR code or `mailslot://` link, and opt-in [discovery on the LAN](#discovery-on-the-lan).
+- A per-sender subfolder option on the server, keyed by the `X-Mailslot-Sender` label, and a history view of both sent and received transfers.
+- [`mailslot-ipc` and `mailslotd`](#local-ipc-and-mailslotd) for non-Rust interfaces.
 
 ### Later
 

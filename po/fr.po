@@ -1,0 +1,681 @@
+# French translations for mailslot package.
+# Copyright (C) 2026 THE mailslot'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the mailslot package.
+# Automatically generated, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: mailslot\n"
+"Report-Msgid-Bugs-To: https://github.com/liminal-hq/mailslot/issues\n"
+"POT-Creation-Date: 2026-11-06 18:09+0000\n"
+"PO-Revision-Date: 2026-11-06 18:09+0000\n"
+"Last-Translator: Automatically generated\n"
+"Language-Team: none\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "0 means never"
+msgstr ""
+
+msgid "0 means no limit"
+msgstr ""
+
+msgid "0 means no limit; 1 is one-shot mode"
+msgstr ""
+
+msgid "0 means no quota"
+msgstr ""
+
+msgid "0 means no timer"
+msgstr ""
+
+msgid "0 picks a free port"
+msgstr ""
+
+#, rust-format
+msgid ""
+"1. Open your router's admin page (often the gateway address, such as "
+"192.168.1.1).\n"
+"2. Find Port Forwarding (sometimes called Virtual Servers or NAT).\n"
+"3. Forward TCP port {} to this computer's local address.\n"
+"4. Share the internet link, using your public address in place of the local "
+"one.\n"
+"5. Remove the forward when you are done."
+msgstr ""
+
+msgid ""
+"A private file drop. Share a secret link and receive files; nothing is ever "
+"served back."
+msgstr ""
+
+msgid ""
+"A self-signed certificate; senders verify it with a key pin shown in the link"
+msgstr ""
+
+msgid "A stalled upload is dropped after this long"
+msgstr ""
+
+msgid "Add a number"
+msgstr ""
+
+msgid "Address"
+msgstr ""
+
+msgid "Allow public address lookup"
+msgstr ""
+
+msgid "Allowed file types"
+msgstr ""
+
+msgid "Already on the other side, nothing sent"
+msgstr ""
+
+msgid "Asking your router…"
+msgstr ""
+
+msgid ""
+"Asks your router to forward the port while you share. You are asked to "
+"confirm each session."
+msgstr ""
+
+msgid ""
+"Asks your router to forward the port with UPnP while you share. Off by "
+"default."
+msgstr ""
+
+msgid "Auto-stop after (minutes)"
+msgstr ""
+
+msgid "Auto-stop timer reached, so sharing stopped"
+msgstr ""
+
+msgid "Bind address"
+msgstr ""
+
+msgid "By date"
+msgstr ""
+
+msgid "By sender label"
+msgstr ""
+
+#, rust-format
+msgid "Cannot write to {}. Choose another folder in Preferences."
+msgstr ""
+
+msgid ""
+"Changes to the port or address take effect the next time you start sharing."
+msgstr ""
+
+#, rust-format
+msgid "Checking {}…"
+msgstr ""
+
+msgid "Choose a folder"
+msgstr ""
+
+msgid "Choose a folder to send"
+msgstr ""
+
+msgid "Choose a folder…"
+msgstr ""
+
+msgid "Choose files to send"
+msgstr ""
+
+msgid "Choose files…"
+msgstr ""
+
+msgid "Choose the destination folder"
+msgstr ""
+
+msgid "Clear History"
+msgstr ""
+
+msgid "Clear finished"
+msgstr ""
+
+msgid "Clear history"
+msgstr ""
+
+msgid "Copied"
+msgstr ""
+
+msgid "Copy SHA-256"
+msgstr ""
+
+msgid "Copy a ready-made command or prompt"
+msgstr ""
+
+msgid "Copy internet link"
+msgstr ""
+
+msgid "Copy link"
+msgstr ""
+
+msgid "Copy link (Ctrl+Shift+C)"
+msgstr ""
+
+msgid "Could not open the port"
+msgstr ""
+
+msgid "Could not reach that link"
+msgstr ""
+
+msgid "Destination"
+msgstr ""
+
+msgid "Destination folder"
+msgstr ""
+
+msgid "Drop link"
+msgstr ""
+
+msgid "Expires"
+msgstr ""
+
+msgid "Failed"
+msgstr ""
+
+msgid "File Drop"
+msgstr ""
+
+msgid "File limit reached, so sharing stopped"
+msgstr ""
+
+msgid "File received"
+msgstr ""
+
+msgid "Files can no longer be sent to your link once Mailslot closes."
+msgstr ""
+
+msgid "Files you receive and send appear here."
+msgstr ""
+
+msgid "Forward the port yourself"
+msgstr ""
+
+msgid "General"
+msgstr ""
+
+msgid "History"
+msgstr ""
+
+msgid "Idle timeout (seconds)"
+msgstr ""
+
+msgid "If a file name exists"
+msgstr ""
+
+#, rust-format
+msgid "In under a minute (at {})"
+msgstr ""
+
+#, rust-format
+msgid "In {} (at {})"
+msgstr ""
+
+msgid "Incoming"
+msgstr ""
+
+msgid "Internet"
+msgstr ""
+
+msgid "Internet link"
+msgstr ""
+
+msgid "Internet link copied"
+msgstr ""
+
+msgid "Internet-exposed"
+msgstr ""
+
+msgid "Keep a history"
+msgstr ""
+
+msgid "Keep history for (days)"
+msgstr ""
+
+msgid "Keep this much disk free (MB)"
+msgstr ""
+
+msgid "Keyboard shortcuts"
+msgstr ""
+
+msgid "Largest file (MB)"
+msgstr ""
+
+msgid "Limit how long and how much a link can be used."
+msgstr ""
+
+msgid "Limits"
+msgstr ""
+
+msgid "Link"
+msgstr ""
+
+msgid "Link copied"
+msgstr ""
+
+msgid "Link expires after (minutes)"
+msgstr ""
+
+msgid "Lock out after bad links"
+msgstr ""
+
+msgid "Mailslot"
+msgstr ""
+
+msgid "Mailslot could not start"
+msgstr ""
+
+msgid ""
+"Mailslot is not allowed to listen on that port. Choose a port above 1024 in "
+"Preferences."
+msgstr ""
+
+msgid "Main menu"
+msgstr ""
+
+msgid "Make a New Link…"
+msgstr ""
+
+msgid "Make a new link"
+msgstr ""
+
+msgid "Make a new link; the old one stops working"
+msgstr ""
+
+msgid "Make a new link?"
+msgstr ""
+
+msgid "Makes one request to a public service to check for double NAT"
+msgstr ""
+
+msgid "Manual Steps"
+msgstr ""
+
+msgid "Mark programs and scripts as risky to open"
+msgstr ""
+
+msgid "Names, sizes and checksums of files sent and received; never the link"
+msgstr ""
+
+msgid "Network"
+msgstr ""
+
+msgid "Never"
+msgstr ""
+
+msgid "New link ready. The old one no longer works."
+msgstr ""
+
+msgid "No history yet"
+msgstr ""
+
+msgid "None"
+msgstr ""
+
+msgid "Not sharing"
+msgstr ""
+
+msgid "Nothing sent yet"
+msgstr ""
+
+msgid "Nothing to send"
+msgstr ""
+
+msgid "Notifications"
+msgstr ""
+
+msgid "Notify when a file arrives"
+msgstr ""
+
+msgid "Open"
+msgstr ""
+
+msgid "Open Mailslot to see them"
+msgstr ""
+
+msgid "Open to the internet"
+msgstr ""
+
+msgid "Open to the internet with UPnP"
+msgstr ""
+
+msgid "Open to the internet?"
+msgstr ""
+
+msgid "Opening this file may run code"
+msgstr ""
+
+msgid "Paste a link first"
+msgstr ""
+
+msgid "Paste a link from the clipboard"
+msgstr ""
+
+msgid ""
+"Paste a link someone gave you, then choose what to send. Uploads resume if "
+"the connection drops, and files the other side already has are skipped."
+msgstr ""
+
+msgid "Paste a link to begin"
+msgstr ""
+
+msgid "Port"
+msgstr ""
+
+#, rust-format
+msgid "Port {} is already in use by another program."
+msgstr ""
+
+msgid "Port-forward instructions…"
+msgstr ""
+
+msgid "PowerShell command"
+msgstr ""
+
+msgid "Preferences"
+msgstr ""
+
+msgid "Preferred interface or address"
+msgstr ""
+
+msgid "Prompt for an AI agent"
+msgstr ""
+
+msgid "QR code for the mailslot link"
+msgstr ""
+
+msgid "Quit"
+msgstr ""
+
+msgid "Reachability"
+msgstr ""
+
+msgid "Read each file back from disk and check its hash"
+msgstr ""
+
+msgid "Receive and send files through a private link"
+msgstr ""
+
+msgid "Received"
+msgstr ""
+
+msgid "Received files"
+msgstr ""
+
+#, rust-format
+msgid "Received · {}"
+msgstr ""
+
+msgid "Refuse the upload"
+msgstr ""
+
+msgid "Requests per minute per sender"
+msgstr ""
+
+msgid "Reset to Defaults"
+msgstr ""
+
+msgid "Restart"
+msgstr ""
+
+#, rust-format
+msgid "Retrying (attempt {})"
+msgstr ""
+
+msgid "SHA-256 copied"
+msgstr ""
+
+msgid "Save a checksum file beside each received file"
+msgstr ""
+
+#, rust-format
+msgid "Saved as {} · {}"
+msgstr ""
+
+#, rust-format
+msgid "Saving to {}"
+msgstr ""
+
+msgid "Secret"
+msgstr ""
+
+msgid "Security"
+msgstr ""
+
+msgid "Send"
+msgstr ""
+
+msgid "Send to another Mailslot"
+msgstr ""
+
+msgid "Sending"
+msgstr ""
+
+msgid "Sent"
+msgstr ""
+
+#, rust-format
+msgid "Sent · {}"
+msgstr ""
+
+msgid "Session quota (MB)"
+msgstr ""
+
+msgid "Session rules"
+msgstr ""
+
+msgid "Settings changed. Restart sharing to apply them."
+msgstr ""
+
+msgid "Share"
+msgstr ""
+
+msgid "Share this link with the sender. Anyone who has it can upload."
+msgstr ""
+
+msgid "Sharing"
+msgstr ""
+
+msgid "Sharing stopped"
+msgstr ""
+
+msgid "Show in Folder"
+msgstr ""
+
+msgid "Show in folder"
+msgstr ""
+
+msgid "Show or hide the secret"
+msgstr ""
+
+msgid "Start or stop sharing"
+msgstr ""
+
+msgid "Start or stop sharing (Ctrl+Shift+S)"
+msgstr ""
+
+msgid "Start sharing"
+msgstr ""
+
+msgid "Start sharing first"
+msgstr ""
+
+msgid "Start sharing on launch"
+msgstr ""
+
+msgid ""
+"Start sharing to get a private link. Anyone with the link can send you "
+"files; nothing is ever served back."
+msgstr ""
+
+msgid "Stop after this many files"
+msgstr ""
+
+msgid "Stop sharing"
+msgstr ""
+
+msgid "Stop sharing and quit?"
+msgstr ""
+
+msgid "Storage"
+msgstr ""
+
+msgid "Subfolders"
+msgstr ""
+
+msgid "That is not a Mailslot link"
+msgstr ""
+
+msgid ""
+"The current link stops working immediately and uploads in progress are "
+"cancelled."
+msgstr ""
+
+msgid "The link expired, so sharing stopped"
+msgstr ""
+
+msgid "The network address used in the link"
+msgstr ""
+
+msgid "The other side is not accepting files right now"
+msgstr ""
+
+msgid "The port is open on your router for this session"
+msgstr ""
+
+msgid "The port is open on your router. Click to stop."
+msgstr ""
+
+msgid "This computer (127.0.0.1)"
+msgstr ""
+
+msgid "Uploads"
+msgstr ""
+
+msgid "Uploads at once"
+msgstr ""
+
+msgid "Uploads that would go below this are refused"
+msgstr ""
+
+msgid "Use HTTPS"
+msgstr ""
+
+#, rust-format
+msgid "Use Port {}"
+msgstr ""
+
+msgid "Verify after saving"
+msgstr ""
+
+msgid "Waiting for files…"
+msgstr ""
+
+msgid "Warn about executables"
+msgstr ""
+
+msgid "Write .sha256 files"
+msgstr ""
+
+msgid ""
+"Wrong-link requests from one address before it is blocked for ten minutes; 0 "
+"turns this off"
+msgstr ""
+
+msgid ""
+"Your router will forward this port to this computer for the current session, "
+"and anyone on the internet who has the link can send you files. The mapping "
+"is time-limited and removed when you stop sharing."
+msgstr ""
+
+msgid "_About Mailslot"
+msgstr ""
+
+msgid "_Cancel"
+msgstr ""
+
+msgid "_Close"
+msgstr ""
+
+msgid "_Keep Sharing"
+msgstr ""
+
+msgid "_Keyboard Shortcuts"
+msgstr ""
+
+msgid "_New Link"
+msgstr ""
+
+msgid "_Open Port"
+msgstr ""
+
+msgid "_Preferences"
+msgstr ""
+
+msgid "_Quit"
+msgstr ""
+
+msgid "_Stop and Quit"
+msgstr ""
+
+msgid "curl command"
+msgstr ""
+
+msgid "file;transfer;upload;share;drop;send;receive;sync;qr;"
+msgstr ""
+
+msgid "mailslot-cli command"
+msgstr ""
+
+msgid "wget command"
+msgstr ""
+
+#, rust-format
+msgid "{} file received"
+msgid_plural "{} files received"
+msgstr[0] ""
+msgstr[1] ""
+
+#, rust-format
+msgid "{} h {} min"
+msgstr ""
+
+#, rust-format
+msgid "{} is ready · up to {} per file"
+msgstr ""
+
+#, rust-format
+msgid "{} left"
+msgstr ""
+
+#, rust-format
+msgid "{} min"
+msgstr ""
+
+#, rust-format
+msgid "{} minute"
+msgid_plural "{} minutes"
+msgstr[0] ""
+msgstr[1] ""
+
+#, rust-format
+msgid "{} of {} · {}"
+msgstr ""
+
+#, rust-format
+msgid "{} received"
+msgstr ""
+
+#, rust-format
+msgid "{} s"
+msgstr ""
+
+#, rust-format
+msgid "{}/s"
+msgstr ""
