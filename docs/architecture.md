@@ -6,6 +6,7 @@ Mailslot is a library with thin shells on top. `mailslot-core` holds every behav
 - [Crates and layers](#crates-and-layers)
 - [The engine contract](#the-engine-contract)
 - [Threading model](#threading-model)
+- [Logging](#logging)
 - [Upload lifecycle](#upload-lifecycle)
 - [Port mapping](#port-mapping)
 - [mailslotd and the IPC API](#mailslotd-and-the-ipc-api)
@@ -41,6 +42,8 @@ Dependencies only point down: frontends depend on `mailslot-core`, and core depe
 | | `config` | `Config` and its sections, `Paths`, loading and saving `config.toml` and the token |
 | | `proto` | Header names, routes, capabilities, the CSP and `MailslotLink` (`mailslot://` links) |
 | | `naming`, `token`, `history`, `netinfo`, `snippets`, `tls`, `error` | Filename sanitizing and collision names, the secret and its constant-time compare, `history.jsonl`, LAN addresses and the opt-in public-IP lookup, copy-paste snippets, the self-signed certificate and its pin, `Error` |
+| | `redact`, `diagnostics` | Token redaction and the plain-text diagnostics report |
+| `mailslot-log` | `init`, `RotatingFile`, `Redacting` | The frontends' `tracing` subscriber: environment filter, private size-capped log file written through a non-blocking appender, secret redaction and the log tail reader |
 | `mailslot-ipc` | `protocol`, `server`, `client` | JSON-RPC types and codes, `Daemon` and `bind`, and a Rust `Client` for the same socket |
 | | `bin/mailslotd` | The headless daemon |
 | `mailslot-cli` | `serve`, `send`, `watch`, `misc` | `serve` drives an `Engine`; `send`, `watch`, `pair` and `status` use `client::Client` directly |
@@ -84,6 +87,10 @@ The GTK app builds the engine with `own_runtime(true)`, so all network and disk 
 - **Only plain data crosses.** Events and state are `Clone + Send` values. GObjects never leave the main thread, and the engine never holds a toolkit object.
 
 The CLI and `mailslotd` run the engine on their own `#[tokio::main]` runtime and need no bridge.
+
+## Logging
+
+`mailslot-core` only emits `tracing` events and never installs a subscriber, so embedders choose where they go. Each frontend (`mailslot`, `mailslot-cli`, `mailslotd`) calls `mailslot_log::init` once at start-up. The file is written from a worker thread, so nothing on the GLib main loop or the tokio runtime waits on the disk. Behaviour and the redaction rules are in [SPEC.md](../SPEC.md#logging-and-diagnostics).
 
 ## Upload lifecycle
 
