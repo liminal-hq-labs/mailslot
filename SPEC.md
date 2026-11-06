@@ -65,7 +65,7 @@ Every route lives under `/<token>/`. Anything else returns a bare `404 not found
 | `GET /<token>/drop.js`, `/drop.css` | Page assets, embedded in the binary |
 | `GET /<token>/health` | `200` JSON, see below |
 | `GET /<token>/have?sha256=<hex>` | Duplicate check, see [Resumable and deduplicated uploads](#resumable-and-deduplicated-uploads) |
-| `HEAD /<token>/<name>` | Resume state for a file, see the same section |
+| `HEAD /<token>/<name>` | Resume offset for an upload id, see the same section |
 | `PUT /<token>/<name>` (and `POST`, for script compatibility) | Raw body upload |
 
 The health body is:
@@ -96,16 +96,14 @@ A sender may include `X-Mailslot-Expected-Sha256: <hex>` or the RFC 9530 `Conten
 | Status | Meaning |
 |---|---|
 | `201` | Complete, saved |
-| `200` | Duplicate: the server already holds this content and kept nothing new |
 | `202` | Partial range accepted, more expected |
 | `308` | Redirect from the token root |
 | `400` | Empty name after sanitizing, or a malformed header |
 | `404` | Bad token or unknown path |
-| `409` | `Content-Range` start does not match the offset the server holds |
+| `409` | `Content-Range` start does not match the offset the server holds, or the name is already taken |
 | `410` | Link expired, or a one-shot link has been used |
 | `413` | Over the size cap (`Content-Length` is checked up front, and chunked bodies are counted as they arrive) |
 | `415` | Extension not allowed |
-| `416` | `Content-Range` is not satisfiable |
 | `422` | Checksum mismatch |
 | `429` | Concurrency or rate limit, with `Retry-After` |
 | `503` | Paused or stopping |
@@ -123,22 +121,19 @@ The page carries `Content-Security-Policy: default-src 'none'; script-src 'self'
 
 ## Resumable and deduplicated uploads
 
-Uploads that carry `X-Mailslot-Expected-Sha256` are resumable. The server keeps an interrupted upload as a partial file keyed by the file name and the expected digest, and removes it after one hour without activity. An upload without an expected digest is deleted when it aborts, as before.
+A sender makes an upload resumable by choosing an upload id and sending it as `X-Mailslot-Upload-Id` (8 to 64 characters from `A-Z a-z 0-9 - _`). The server keeps an interrupted upload as a partial file keyed by that id and removes it after one hour without activity. An upload without an id is deleted when it aborts, as before.
 
-**`HEAD /<token>/<name>`** reports what the server holds, keyed by `X-Mailslot-Expected-Sha256` when the request carries it:
+**`HEAD /<token>/<name>`** with `X-Mailslot-Upload-Id` reports what the server holds: `200` with `X-Mailslot-Offset: <bytes>` (`0` when there is no partial) and `Accept-Ranges: bytes`.
 
-- `200` with `X-Mailslot-Offset: <bytes>` (`0` when there is no partial) and `X-Mailslot-Exists: true|false`.
-- `Exists` is true when a finished file with that digest has already been received.
-
-**Resuming.** The client sends `PUT` with `Content-Range: bytes <start>-<end>/<total>` where `<start>` equals the offset the server reported.
+**Resuming.** The client sends `PUT` with the same `X-Mailslot-Upload-Id` and `Content-Range: bytes <start>-<end>/<total>`, where `<start>` equals the offset the server reported.
 
 - A matching range appends to the partial. The server answers `202` with `X-Mailslot-Offset` until the last byte arrives, then finalizes and answers `201` with the same headers as an unbroken upload. The SHA-256 covers the whole file, including the part received earlier.
 - A start that does not match returns `409` with the current `X-Mailslot-Offset`, so the client can realign.
-- A range past the declared total returns `416`.
+- `Content-Range` without an upload id, or one whose length disagrees with `Content-Length`, returns `400`.
 
-**`GET /<token>/have?sha256=<hex>`** returns `200` with `{"have":true,"name":"…","size":N}` or `{"have":false}`. The index covers files received in the current history window, not a scan of the destination folder. A `PUT` whose expected digest is already held returns `200` with `X-Mailslot-Duplicate: true` and writes nothing.
+**`GET /<token>/have?sha256=<hex>`** returns `200` with `{"have":true}` or `{"have":false}`. The index covers files received within the history window, not a scan of the destination folder. Clients ask before sending, and skip the upload when the answer is true. A `have` answer reveals nothing the caller did not already know, because the caller supplies the digest.
 
-Dedupe never reveals files outside the token. The answer is only about a digest the caller already knows.
+**`X-Mailslot-Sender`** is an optional request header with a label for the sender. With `storage.subfolders = "sender"` it names the subfolder.
 
 ## Web upload page
 
@@ -170,7 +165,7 @@ The Share page shows both the `mailslot://` link and the plain `http(s)://HOST:P
 | Command | Purpose |
 |---|---|
 | `send [FILE…\|-] LINK` | Upload files, folders (recursively) or stdin (`--name`). Resumes, retries with backoff, sends the SHA-256 up front, skips duplicates, runs files in parallel (`--jobs`), and limits bandwidth (`--limit`). `--json` prints one JSON object per event. Exit code is non-zero if any file failed |
-| `serve` | Run a headless receiver. Prints one line `URL <http://HOST:PORT/TOKEN/>` to stdout once listening, then serves until SIGTERM or SIGINT |
+| `serve` | Run a headless receiver. Prints one line `URL http://HOST:PORT/TOKEN/` to stdout once listening, then serves until SIGTERM or SIGINT |
 | `watch DIR LINK` | Push new and changed files in a folder (roadmap v1, uses the same send queue) |
 | `pair` | Print a link and a QR code in the terminal for a running or configured receiver |
 | `status` | Show the configured receiver's state, link and recent uploads |

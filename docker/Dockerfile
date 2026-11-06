@@ -63,7 +63,8 @@ ARG USER_GID=1000
 
 RUN groupadd -g "${USER_GID}" dev \
     && useradd -l -m -u "${USER_UID}" -g "${USER_GID}" dev \
-    && chown -R dev:dev /usr/local/cargo /usr/local/rustup
+    && chown -R dev:dev /usr/local/cargo /usr/local/rustup \
+    && install -d -o dev -g dev /target /home/dev/.cargo/registry
 
 USER dev
 ENV CARGO_TARGET_DIR=/target
