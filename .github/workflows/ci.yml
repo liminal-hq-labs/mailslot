@@ -446,6 +446,35 @@ jobs:
             echo "- Command: \`bash scripts/check-data.sh\`"
           } >> "${GITHUB_STEP_SUMMARY}"
 
+  diagrams:
+    name: Diagram text fit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # The runner image ships Google Chrome; the fonts give the wide-font pass real fallbacks.
+      - name: Install xmllint and fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libxml2-utils fonts-dejavu-core fonts-liberation
+
+      - name: Static checks and text fit in Chrome
+        id: check
+        env:
+          DIAGRAMS_REQUIRE_RENDER: "1"
+        run: bash scripts/check-diagrams.sh
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Diagram text fit"
+            echo "- Result: \`${{ steps.check.outcome }}\`"
+            echo "- Command: \`DIAGRAMS_REQUIRE_RENDER=1 bash scripts/check-diagrams.sh\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
   docs-lint:
     name: Docs lint
     runs-on: ubuntu-24.04
@@ -798,7 +827,7 @@ jobs:
   required:
     name: required
     if: always()
-    needs: [image, build, fmt, clippy, test, ui-test, smoke, upnp-test, deny, headers, style, data-check, docs-lint, docker-lint, core-embed, package-deb, package-rpm, package-appimage, package-cli-tarball, flatpak]
+    needs: [image, build, fmt, clippy, test, ui-test, smoke, upnp-test, deny, headers, style, data-check, diagrams, docs-lint, docker-lint, core-embed, package-deb, package-rpm, package-appimage, package-cli-tarball, flatpak]
     runs-on: ubuntu-24.04
     steps:
       - name: Check every job

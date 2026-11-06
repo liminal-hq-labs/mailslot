@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Validates the desktop file, AppStream metadata, XML, SVG icons, banner and completions.
+# Validates the desktop file, AppStream metadata, XML, SVG icons, banner, diagrams and completions.
 #
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
@@ -38,6 +38,7 @@ done
 
 step "mailslotd.service names the installed binary" grep -qx 'ExecStart=/usr/bin/mailslotd' data/mailslotd.service
 step "banner" bash scripts/check-banner.sh
+step "architecture diagrams" bash scripts/check-diagrams.sh --static
 step "bash completion syntax" bash -n data/completions/mailslot-cli.bash
 if command -v zsh >/dev/null 2>&1; then
 	step "zsh completion syntax" zsh -n data/completions/_mailslot-cli

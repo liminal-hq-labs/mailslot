@@ -136,8 +136,9 @@ style: ## No colour literals outside style.css, named colours only
 	bash scripts/check-style.sh
 
 .PHONY: data-check
-data-check: ## Desktop file, AppStream, XML and SVG validity, banner and icons
+data-check: ## Desktop file, AppStream, XML and SVG validity, banner, icons and diagrams
 	$(IN_IMAGE) bash scripts/check-data.sh
+	bash scripts/check-diagrams.sh --render
 
 .PHONY: validate
 validate: lint test test-ui smoke upnp-test data-check deny ## The single gate, same as CI
