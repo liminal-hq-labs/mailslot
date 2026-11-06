@@ -1,6 +1,6 @@
 [package]
 name = "mailslot-core"
-description = "Async engine, HTTP server, resumable client and port mapping behind Mailslot, a private file-drop endpoint."
+description = "Engine, protocol, server, client and UPnP port mapping for Mailslot, a private file-drop slot"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,8 +9,8 @@ repository.workspace = true
 homepage.workspace = true
 authors.workspace = true
 readme = "README.md"
-keywords = ["file-transfer", "upload", "upnp", "http", "async"]
-categories = ["network-programming", "web-programming::http-server", "asynchronous"]
+keywords = ["file-transfer", "upload", "upnp", "server", "client"]
+categories = ["network-programming", "web-programming::http-server"]
 
 [package.metadata.docs.rs]
 all-features = true

@@ -34,16 +34,44 @@ tempfile = "3"
 
 [package.metadata.deb]
 name = "mailslot-cli"
+maintainer = "Scott Morris <scott.moris@gmail.com>"
+copyright = "2026, Liminal HQ, Scott Morris"
+license-file = ["../../LICENSE-MIT", "0"]
 section = "net"
 priority = "optional"
-extended-description = "Serve a private file drop from a headless machine, or send files to a Mailslot link with resumable uploads, deduplication and checksums. No GTK required."
+depends = "$auto"
+extended-description = """\
+mailslot-cli sends files to a Mailslot and runs a headless receiver, with no \
+GTK dependency. Uploads resume after a dropped connection, retry with backoff \
+and skip files the receiver already has."""
 assets = [
 	["target/release/mailslot-cli", "usr/bin/", "755"],
+	["../../data/man/mailslot-cli.1", "usr/share/man/man1/", "644"],
+	["../../data/completions/mailslot-cli.bash", "usr/share/bash-completion/completions/mailslot-cli", "644"],
+	["../../data/completions/mailslot-cli.fish", "usr/share/fish/vendor_completions.d/mailslot-cli.fish", "644"],
+	["../../data/completions/_mailslot-cli", "usr/share/zsh/vendor-completions/_mailslot-cli", "644"],
+	["../../LICENSE-APACHE", "usr/share/doc/mailslot-cli/", "644"],
+	["../../LICENSE-MIT", "usr/share/doc/mailslot-cli/", "644"],
+	["../../README.md", "usr/share/doc/mailslot-cli/", "644"],
 ]
 
 [package.metadata.generate-rpm]
 name = "mailslot-cli"
-summary = "Command-line server and client for Mailslot"
+summary = "Send files to a Mailslot and receive them headless"
+description = """\
+mailslot-cli sends files to a Mailslot and runs a headless receiver, with no GTK dependency. Uploads resume after a dropped connection, retry with backoff and skip files the receiver already has."""
+license = "Apache-2.0 OR MIT"
+url = "https://github.com/liminal-hq/mailslot"
+vendor = "Liminal HQ"
+release = "1"
+auto-req = "auto"
 assets = [
 	{ source = "target/release/mailslot-cli", dest = "/usr/bin/mailslot-cli", mode = "755" },
+	{ source = "../../data/man/mailslot-cli.1", dest = "/usr/share/man/man1/mailslot-cli.1", mode = "644", doc = true },
+	{ source = "../../data/completions/mailslot-cli.bash", dest = "/usr/share/bash-completion/completions/mailslot-cli", mode = "644" },
+	{ source = "../../data/completions/mailslot-cli.fish", dest = "/usr/share/fish/vendor_completions.d/mailslot-cli.fish", mode = "644" },
+	{ source = "../../data/completions/_mailslot-cli", dest = "/usr/share/zsh/site-functions/_mailslot-cli", mode = "644" },
+	{ source = "../../LICENSE-APACHE", dest = "/usr/share/licenses/mailslot-cli/LICENSE-APACHE", mode = "644", doc = true },
+	{ source = "../../LICENSE-MIT", dest = "/usr/share/licenses/mailslot-cli/LICENSE-MIT", mode = "644", doc = true },
+	{ source = "../../README.md", dest = "/usr/share/doc/mailslot-cli/README.md", mode = "644", doc = true },
 ]
