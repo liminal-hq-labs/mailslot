@@ -104,7 +104,7 @@ Use `#` comments for shell, YAML, TOML and Dockerfiles, and an XML comment for `
 
 ## GTK rules
 
-- **GObjects stay on the main thread.** Never send a `glib::Object` across threads. Send plain data over a channel.
+- **GObjects stay on the main thread.** Never send a `glib::Object` across threads. Pass plain data to the main loop, as the engine's event stream does.
 - **Never block the main loop.** No `block_on`, no sleeping, no synchronous I/O in a signal handler. Use `glib::spawn_future_local` to consume the engine's event stream.
 - **All user-facing strings go through `gettext`.**
 - **No colour literals outside `crates/mailslot-gtk/resources/style.css`**, and `style.css` uses only libadwaita named colours (`@accent_bg_color` and similar). `scripts/check-style.sh` fails otherwise. Brand colours belong to the icon, banner, About artwork and metainfo only.

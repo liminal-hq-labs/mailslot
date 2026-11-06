@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mailslot\n"
 "Report-Msgid-Bugs-To: https://github.com/liminal-hq/mailslot/issues\n"
-"POT-Creation-Date: 2026-11-06 18:09+0000\n"
+"POT-Creation-Date: 2026-11-06 19:56+0000\n"
 "PO-Revision-Date: 2026-11-06 18:09+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -59,6 +59,9 @@ msgid "A stalled upload is dropped after this long"
 msgstr ""
 
 msgid "Add a number"
+msgstr ""
+
+msgid "Add the secret from the link you were given"
 msgstr ""
 
 msgid "Address"
@@ -122,6 +125,9 @@ msgstr ""
 msgid "Choose a folder…"
 msgstr ""
 
+msgid "Choose an image with a QR code"
+msgstr ""
+
 msgid "Choose files to send"
 msgstr ""
 
@@ -158,10 +164,16 @@ msgstr ""
 msgid "Copy link (Ctrl+Shift+C)"
 msgstr ""
 
+msgid "Could not open that image"
+msgstr ""
+
 msgid "Could not open the port"
 msgstr ""
 
 msgid "Could not reach that link"
+msgstr ""
+
+msgid "Could not read that image"
 msgstr ""
 
 msgid "Destination"
@@ -194,6 +206,9 @@ msgstr ""
 msgid "Files you receive and send appear here."
 msgstr ""
 
+msgid "Find a link"
+msgstr ""
+
 msgid "Forward the port yourself"
 msgstr ""
 
@@ -203,10 +218,16 @@ msgstr ""
 msgid "History"
 msgstr ""
 
+msgid "How long the router keeps the port open before it is renewed, 5 to 60"
+msgstr ""
+
 msgid "Idle timeout (seconds)"
 msgstr ""
 
 msgid "If a file name exists"
+msgstr ""
+
+msgid "Images"
 msgstr ""
 
 #, rust-format
@@ -262,7 +283,16 @@ msgstr ""
 msgid "Link expires after (minutes)"
 msgstr ""
 
+msgid "Link found"
+msgstr ""
+
 msgid "Lock out after bad links"
+msgstr ""
+
+msgid "Look for nearby shares"
+msgstr ""
+
+msgid "Looking…"
 msgstr ""
 
 msgid "Mailslot"
@@ -312,7 +342,15 @@ msgstr ""
 msgid "New link ready. The old one no longer works."
 msgstr ""
 
+msgid "No QR code found in that image"
+msgstr ""
+
 msgid "No history yet"
+msgstr ""
+
+msgid ""
+"No nearby shares found. They appear only while sharing with network "
+"announcements turned on."
 msgstr ""
 
 msgid "None"
@@ -365,6 +403,15 @@ msgstr ""
 msgid "Paste a link to begin"
 msgstr ""
 
+msgid "Pause accepting files (Ctrl+Shift+P)"
+msgstr ""
+
+msgid "Pause or resume accepting files"
+msgstr ""
+
+msgid "Paused. Senders are told you are not accepting files."
+msgstr ""
+
 msgid "Port"
 msgstr ""
 
@@ -396,6 +443,12 @@ msgstr ""
 msgid "Reachability"
 msgstr ""
 
+msgid "Read a QR code from an image…"
+msgstr ""
+
+msgid "Read a QR code from the clipboard"
+msgstr ""
+
 msgid "Read each file back from disk and check its hash"
 msgstr ""
 
@@ -424,8 +477,17 @@ msgstr ""
 msgid "Restart"
 msgstr ""
 
+msgid "Resume"
+msgstr ""
+
+msgid "Resume accepting files (Ctrl+Shift+P)"
+msgstr ""
+
 #, rust-format
 msgid "Retrying (attempt {})"
+msgstr ""
+
+msgid "Router lease (minutes)"
 msgstr ""
 
 msgid "SHA-256 copied"
@@ -440,6 +502,12 @@ msgstr ""
 
 #, rust-format
 msgid "Saving to {}"
+msgstr ""
+
+msgid ""
+"Scan a QR code from a screenshot or the clipboard, or look for shares on "
+"this network. Nearby shares never reveal their secret; you still need the "
+"full link."
 msgstr ""
 
 msgid "Secret"
@@ -529,7 +597,13 @@ msgstr ""
 msgid "Subfolders"
 msgstr ""
 
+msgid "That QR code is not a Mailslot link"
+msgstr ""
+
 msgid "That is not a Mailslot link"
+msgstr ""
+
+msgid "The clipboard has no image"
 msgstr ""
 
 msgid ""

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mailslot\n"
 "Report-Msgid-Bugs-To: https://github.com/liminal-hq/mailslot/issues\n"
-"POT-Creation-Date: 2026-11-06 18:09+0000\n"
+"POT-Creation-Date: 2026-11-06 19:56+0000\n"
 "PO-Revision-Date: 2026-11-06 18:09+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -70,6 +70,9 @@ msgstr "A stalled upload is dropped after this long"
 
 msgid "Add a number"
 msgstr "Add a number"
+
+msgid "Add the secret from the link you were given"
+msgstr ""
 
 msgid "Address"
 msgstr "Address"
@@ -137,6 +140,9 @@ msgstr "Choose a folder to send"
 msgid "Choose a folder…"
 msgstr "Choose a folder…"
 
+msgid "Choose an image with a QR code"
+msgstr ""
+
 msgid "Choose files to send"
 msgstr "Choose files to send"
 
@@ -173,10 +179,18 @@ msgstr "Copy link"
 msgid "Copy link (Ctrl+Shift+C)"
 msgstr "Copy link (Ctrl+Shift+C)"
 
+#, fuzzy
+msgid "Could not open that image"
+msgstr "Could not open the port"
+
 msgid "Could not open the port"
 msgstr "Could not open the port"
 
 msgid "Could not reach that link"
+msgstr "Could not reach that link"
+
+#, fuzzy
+msgid "Could not read that image"
 msgstr "Could not reach that link"
 
 msgid "Destination"
@@ -209,6 +223,9 @@ msgstr "Files can no longer be sent to your link once Mailslot closes."
 msgid "Files you receive and send appear here."
 msgstr "Files you receive and send appear here."
 
+msgid "Find a link"
+msgstr ""
+
 msgid "Forward the port yourself"
 msgstr "Forward the port yourself"
 
@@ -218,11 +235,17 @@ msgstr "General"
 msgid "History"
 msgstr "History"
 
+msgid "How long the router keeps the port open before it is renewed, 5 to 60"
+msgstr ""
+
 msgid "Idle timeout (seconds)"
 msgstr "Idle timeout (seconds)"
 
 msgid "If a file name exists"
 msgstr "If a file name exists"
+
+msgid "Images"
+msgstr ""
 
 #, rust-format
 msgid "In under a minute (at {})"
@@ -277,8 +300,18 @@ msgstr "Link copied"
 msgid "Link expires after (minutes)"
 msgstr "Link expires after (minutes)"
 
+#, fuzzy
+msgid "Link found"
+msgstr "Link copied"
+
 msgid "Lock out after bad links"
 msgstr "Lock out after bad links"
+
+msgid "Look for nearby shares"
+msgstr ""
+
+msgid "Looking…"
+msgstr ""
 
 msgid "Mailslot"
 msgstr "Mailslot"
@@ -329,8 +362,16 @@ msgstr "Never"
 msgid "New link ready. The old one no longer works."
 msgstr "New link ready. The old one no longer works."
 
+msgid "No QR code found in that image"
+msgstr ""
+
 msgid "No history yet"
 msgstr "No history yet"
+
+msgid ""
+"No nearby shares found. They appear only while sharing with network "
+"announcements turned on."
+msgstr ""
 
 msgid "None"
 msgstr "None"
@@ -384,6 +425,15 @@ msgstr ""
 msgid "Paste a link to begin"
 msgstr "Paste a link to begin"
 
+msgid "Pause accepting files (Ctrl+Shift+P)"
+msgstr ""
+
+msgid "Pause or resume accepting files"
+msgstr ""
+
+msgid "Paused. Senders are told you are not accepting files."
+msgstr ""
+
 msgid "Port"
 msgstr "Port"
 
@@ -415,6 +465,13 @@ msgstr "Quit"
 msgid "Reachability"
 msgstr "Reachability"
 
+msgid "Read a QR code from an image…"
+msgstr ""
+
+#, fuzzy
+msgid "Read a QR code from the clipboard"
+msgstr "Paste a link from the clipboard"
+
 msgid "Read each file back from disk and check its hash"
 msgstr "Read each file back from disk and check its hash"
 
@@ -443,9 +500,19 @@ msgstr "Reset to Defaults"
 msgid "Restart"
 msgstr "Restart"
 
+msgid "Resume"
+msgstr ""
+
+msgid "Resume accepting files (Ctrl+Shift+P)"
+msgstr ""
+
 #, rust-format
 msgid "Retrying (attempt {})"
 msgstr "Retrying (attempt {})"
+
+#, fuzzy
+msgid "Router lease (minutes)"
+msgstr "Auto-stop after (minutes)"
 
 msgid "SHA-256 copied"
 msgstr "SHA-256 copied"
@@ -460,6 +527,12 @@ msgstr "Saved as {} · {}"
 #, rust-format
 msgid "Saving to {}"
 msgstr "Saving to {}"
+
+msgid ""
+"Scan a QR code from a screenshot or the clipboard, or look for shares on "
+"this network. Nearby shares never reveal their secret; you still need the "
+"full link."
+msgstr ""
 
 msgid "Secret"
 msgstr "Secret"
@@ -550,8 +623,15 @@ msgstr "Storage"
 msgid "Subfolders"
 msgstr "Subfolders"
 
+#, fuzzy
+msgid "That QR code is not a Mailslot link"
+msgstr "That is not a Mailslot link"
+
 msgid "That is not a Mailslot link"
 msgstr "That is not a Mailslot link"
+
+msgid "The clipboard has no image"
+msgstr ""
 
 msgid ""
 "The current link stops working immediately and uploads in progress are "
