@@ -16,9 +16,9 @@ trim_trailing_whitespace = false
 indent_style = space
 indent_size = 2
 
-# rustfmt defaults.
+# rustfmt uses hard tabs (see rustfmt.toml).
 [*.rs]
-indent_style = space
+indent_style = tab
 indent_size = 4
 
 [Makefile]

@@ -11,6 +11,7 @@ Mailslot is a private file-drop server and client: GTK4 and libadwaita desktop a
 - **Canadian English.** Real em dashes. No hard-wrapped markdown prose. Ship the result, not the journey: no "this PR" or reviewer names in code or docs.
 - **Conventional Commits.** Body in markdown with bold labels and no headings, hard-wrapped, written to a file and committed with `git commit -F`. End with a `Co-Authored-By` trailer.
 - **Git.** Topic branches, merge commits only. Never push, tag, publish or dispatch workflows unless asked. Never `git add -A` or `git commit -a`. `PLAN.md` stays out of git.
+- **Formatting.** Rust uses rustfmt with hard tabs (`rustfmt.toml`); JS, CSS, HTML, TOML, Markdown, `.ui` and SVG use tabs; YAML uses spaces. Never edit `rustfmt.toml` casually.
 - **Headers.** SPDX header on every source, script, YAML, SVG and `.ui` file: summary line, blank, "(c) Copyright 2026 Liminal HQ, Scott Morris", `SPDX-License-Identifier: Apache-2.0 OR MIT`.
 - **Core first.** `mailslot-core` has no GTK dependency and exposes an `Engine` with an event stream. GTK and the CLI are thin shells.
 - **GTK.** GObjects only on the main thread. Never block the main loop. Strings through `gettext`. No colour literals outside `style.css`, which uses only libadwaita named colours.

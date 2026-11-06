@@ -74,8 +74,8 @@ Mailslot is a private file-drop server and client for Linux: a GTK4 and libadwai
 - **Toolchain:** pinned in `rust-toolchain.toml` (Rust 1.98.0, edition 2024).
 - **Container:** the Fedora 45 image in `docker/` is the canonical build environment, with GTK 4.24, libadwaita 1.10, weston, blueprint, AppStream tools and nextest. `make image` builds it. The host also builds natively if GTK 4.20 and libadwaita 1.8 are installed.
 - **Gate:** `make validate` is the single local gate and mirrors CI. It must pass before a pull request is opened or updated.
-- **Editor settings:** `.editorconfig` is authoritative: tabs for most files, spaces for YAML and Rust (rustfmt defaults).
-- No `rustfmt.toml`. Strictness comes from CI: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo nextest run`.
+- **Editor settings:** `.editorconfig` is authoritative: tabs for Rust, TOML, Markdown, `.ui`, SVG, CSS, JS and HTML, spaces for YAML, tabs in the Makefile.
+- Rust is formatted with rustfmt using hard tabs (see `rustfmt.toml`, which overrides the house "no rustfmt.toml" note for this project). Web UI assets (JS, CSS, HTML) also use tabs. Strictness comes from CI: `cargo fmt --all -- --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo nextest run`.
 - The Docker image stays plain OCI and never publishes ports. `--network host` is used only where documented (SSDP multicast and LAN testing).
 - Do not run anything that opens a port to the internet. Test UPnP against the fake IGD and the Docker `miniupnpd` only.
 
