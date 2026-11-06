@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# AppRun for the Mailslot AppImage: runs the GUI, or the CLI when the first argument is `mailslot-cli`.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+set -e
+
+here="$(dirname "$(readlink -f "${0}")")"
+export APPDIR="${APPDIR:-$here}"
+
+# linuxdeploy's GTK plugin installs environment hooks (schemas, loaders, icon theme paths).
+for hook in "$APPDIR"/apprun-hooks/*.sh; do
+	# shellcheck disable=SC1090
+	[ -r "$hook" ] && . "$hook"
+done
+
+export PATH="$APPDIR/usr/bin:$PATH"
+export XDG_DATA_DIRS="$APPDIR/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
+if [ "${1:-}" = mailslot-cli ]; then
+	shift
+	exec "$APPDIR/usr/bin/mailslot-cli" "$@"
+fi
+exec "$APPDIR/usr/bin/mailslot" "$@"

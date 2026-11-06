@@ -1,0 +1,20 @@
+# Desktop entry for the Mailslot GTK app.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+[Desktop Entry]
+Type=Application
+Name=Mailslot
+GenericName=File Drop
+Comment=Receive and send files through a private link
+Comment[fr]=Recevoir et envoyer des fichiers par un lien privé
+Keywords=file;transfer;upload;share;drop;send;receive;sync;qr;
+Exec=mailslot
+Icon=ca.liminalhq.mailslot
+Terminal=false
+StartupNotify=true
+DBusActivatable=false
+Categories=Network;FileTransfer;GTK;
+SingleMainWindow=true
+X-GNOME-UsesNotifications=true

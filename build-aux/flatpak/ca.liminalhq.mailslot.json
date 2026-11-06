@@ -1,0 +1,50 @@
+{
+	"app-id": "ca.liminalhq.mailslot",
+	"runtime": "org.gnome.Platform",
+	"runtime-version": "51",
+	"sdk": "org.gnome.Sdk",
+	"sdk-extensions": ["org.freedesktop.Sdk.Extension.rust-stable"],
+	"command": "mailslot",
+	"finish-args": [
+		"--share=network",
+		"--share=ipc",
+		"--socket=wayland",
+		"--socket=fallback-x11",
+		"--device=dri",
+		"--filesystem=xdg-download/Mailslot:create"
+	],
+	"build-options": {
+		"append-path": "/usr/lib/sdk/rust-stable/bin",
+		"env": {
+			"CARGO_HOME": "/run/build/mailslot/cargo",
+			"CARGO_NET_OFFLINE": "true"
+		}
+	},
+	"modules": [
+		{
+			"name": "mailslot",
+			"buildsystem": "simple",
+			"build-commands": [
+				"cargo --offline build --release --locked -p mailslot-gtk -p mailslot-cli",
+				"install -Dm755 target/release/mailslot /app/bin/mailslot",
+				"install -Dm755 target/release/mailslot-cli /app/bin/mailslot-cli",
+				"install -Dm644 data/ca.liminalhq.mailslot.desktop /app/share/applications/ca.liminalhq.mailslot.desktop",
+				"install -Dm644 data/ca.liminalhq.mailslot.metainfo.xml /app/share/metainfo/ca.liminalhq.mailslot.metainfo.xml",
+				"install -Dm644 data/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg /app/share/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg",
+				"install -Dm644 data/icons/hicolor/symbolic/apps/ca.liminalhq.mailslot-symbolic.svg /app/share/icons/hicolor/symbolic/apps/ca.liminalhq.mailslot-symbolic.svg",
+				"install -Dm644 data/man/mailslot-cli.1 /app/share/man/man1/mailslot-cli.1",
+				"install -Dm644 data/completions/mailslot-cli.bash /app/share/bash-completion/completions/mailslot-cli",
+				"install -Dm644 data/completions/mailslot-cli.fish /app/share/fish/vendor_completions.d/mailslot-cli.fish",
+				"install -Dm644 data/completions/_mailslot-cli /app/share/zsh/site-functions/_mailslot-cli"
+			],
+			"sources": [
+				{
+					"type": "dir",
+					"path": "../..",
+					"skip": ["target", ".git", "build-aux/flatpak/build", "build-aux/flatpak/repo", "dist"]
+				},
+				"cargo-sources.json"
+			]
+		}
+	]
+}

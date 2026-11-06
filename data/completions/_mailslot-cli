@@ -1,0 +1,44 @@
+#compdef mailslot-cli
+# Zsh completion for mailslot-cli.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+_mailslot_cli() {
+	local -a commands
+	commands=(
+		'send:Upload files, folders or stdin to a link'
+		'serve:Run a headless receiver'
+		'watch:Push a folder to a link'
+		'pair:Print the link and a QR code'
+		'status:Show receiver state'
+	)
+
+	if (( CURRENT == 2 )); then
+		_describe -t commands command commands
+		return
+	fi
+
+	case "$words[2]" in
+	send)
+		_arguments \
+			'--name=[Name for data read from stdin]:name' \
+			'--jobs=[Files in parallel]:jobs' \
+			'--limit=[Bandwidth limit, for example 2M]:rate' \
+			'--json[Print one JSON object per event]' \
+			'*:file:_files'
+		;;
+	serve)
+		_arguments \
+			'--bind=[Address to listen on]:address' \
+			'--dir=[Destination folder]:directory:_files -/' \
+			'--port=[Port]:port' \
+			'--max-mb=[Per-file size cap in MB]:megabytes'
+		;;
+	watch)
+		_arguments '1:directory:_files -/' '2:link'
+		;;
+	esac
+}
+
+_mailslot_cli "$@"
