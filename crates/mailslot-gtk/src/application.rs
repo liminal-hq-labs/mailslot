@@ -96,6 +96,11 @@ fn about_dialog() -> adw::AboutDialog {
 
 /// Runs the application and returns the process exit code.
 pub fn run() -> glib::ExitCode {
+	build_application().run_with_args::<&str>(&[])
+}
+
+/// Builds the application with its actions and activation handler, without running it.
+pub fn build_application() -> adw::Application {
 	let app = adw::Application::builder().application_id(APP_ID).build();
 	let window: Rc<RefCell<Option<MailslotWindow>>> = Rc::default();
 
@@ -126,6 +131,11 @@ pub fn run() -> glib::ExitCode {
 				w.present();
 				return;
 			}
+			// Building the engine is asynchronous and no window exists yet, so without a hold
+			// the application sees itself idle and exits as soon as `activate` returns. The
+			// window keeps the application alive once it exists, and closing it quits, so the
+			// hold only covers start-up (and the error dialog, which is not an app window).
+			let hold = app.hold();
 			let (app, window) = (app.clone(), window.clone());
 			glib::spawn_future_local(async move {
 				let engine = match build_engine().await {
@@ -136,6 +146,8 @@ pub fn run() -> glib::ExitCode {
 							Some(&e.to_string()),
 						);
 						dialog.add_response("ok", &gettext("_Close"));
+						let hold = std::cell::Cell::new(Some(hold));
+						dialog.connect_closed(move |_| drop(hold.take()));
 						dialog.present(None::<&gtk::Widget>);
 						return;
 					}
@@ -149,6 +161,7 @@ pub fn run() -> glib::ExitCode {
 					gio::prelude::ActionGroupExt::activate_action(&win, "toggle-sharing", None);
 				}
 				*window.borrow_mut() = Some(win);
+				drop(hold);
 			});
 		});
 	}
@@ -234,5 +247,5 @@ pub fn run() -> glib::ExitCode {
 	});
 	app.add_action(&show_file);
 
-	app.run_with_args::<&str>(&[])
+	app
 }

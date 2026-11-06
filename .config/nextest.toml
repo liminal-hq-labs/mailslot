@@ -3,6 +3,11 @@
 # (c) Copyright 2026 Liminal HQ, Scott Morris
 # SPDX-License-Identifier: Apache-2.0 OR MIT
 
+# The miniupnpd tests share one gateway and `cleanup_stale` removes every Mailslot mapping on
+# it, so they must not run at the same time.
+[test-groups]
+miniupnpd = { max-threads = 1 }
+
 [profile.default]
 retries = 0
 slow-timeout = { period = "30s", terminate-after = 4 }
@@ -14,3 +19,11 @@ slow-timeout = { period = "30s", terminate-after = 4 }
 
 [profile.ci.junit]
 path = "junit.xml"
+
+[[profile.default.overrides]]
+filter = 'test(/miniupnpd_/)'
+test-group = 'miniupnpd'
+
+[[profile.ci.overrides]]
+filter = 'test(/miniupnpd_/)'
+test-group = 'miniupnpd'

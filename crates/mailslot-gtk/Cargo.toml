@@ -1,6 +1,6 @@
 [package]
 name = "mailslot-gtk"
-description = "Mailslot, a private file drop for the GNOME desktop: share a secret link, receive files, send files."
+description = "Private file drop for the GNOME desktop"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -40,9 +40,10 @@ tempfile = "3"
 
 [package.metadata.deb]
 name = "mailslot"
+changelog = "../../packaging/deb/changelog-mailslot"
 maintainer = "Scott Morris <scott.moris@gmail.com>"
 copyright = "2026, Liminal HQ, Scott Morris"
-license-file = ["../../LICENSE-MIT", "0"]
+license-file = ["../../packaging/deb/copyright", "0"]
 section = "net"
 priority = "optional"
 depends = "$auto, libgtk-4-1 (>= 4.20), libadwaita-1-0 (>= 1.8)"
@@ -51,16 +52,18 @@ provides = "mailslot-cli"
 conflicts = "mailslot-cli"
 replaces = "mailslot-cli"
 extended-description = """\
-Mailslot receives files through a private link. Start sharing, hand out the \
-link, and files sent to it land in a folder with a SHA-256 checksum. Nothing \
-is ever served back.
- .
-It also sends: the Send page and the mailslot-cli command push files to \
+Receive files through a private link. Start sharing, hand out the link, and \
+files sent to it land in a folder with a SHA-256 checksum. Nothing is ever \
+served back.
+
+It also sends. The Send page and the mailslot-cli command push files to \
 another Mailslot, resume interrupted transfers and skip files the other side \
-already has. Includes the mailslot-cli command."""
+already has. This package includes the mailslot-cli command."""
 assets = [
 	["target/release/mailslot", "usr/bin/", "755"],
 	["target/release/mailslot-cli", "usr/bin/", "755"],
+	["target/release/mailslotd", "usr/bin/", "755"],
+	["../../data/mailslotd.service", "usr/lib/systemd/user/", "644"],
 	["../../data/ca.liminalhq.mailslot.desktop", "usr/share/applications/", "644"],
 	["../../data/ca.liminalhq.mailslot.metainfo.xml", "usr/share/metainfo/", "644"],
 	["../../data/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg", "usr/share/icons/hicolor/scalable/apps/", "644"],
@@ -69,7 +72,6 @@ assets = [
 	["../../data/completions/mailslot-cli.bash", "usr/share/bash-completion/completions/mailslot-cli", "644"],
 	["../../data/completions/mailslot-cli.fish", "usr/share/fish/vendor_completions.d/mailslot-cli.fish", "644"],
 	["../../data/completions/_mailslot-cli", "usr/share/zsh/vendor-completions/_mailslot-cli", "644"],
-	["../../LICENSE-APACHE", "usr/share/doc/mailslot/", "644"],
 	["../../LICENSE-MIT", "usr/share/doc/mailslot/", "644"],
 	["../../README.md", "usr/share/doc/mailslot/", "644"],
 ]
@@ -91,6 +93,8 @@ obsoletes = { mailslot-cli = "< 0.1.0" }
 assets = [
 	{ source = "target/release/mailslot", dest = "/usr/bin/mailslot", mode = "755" },
 	{ source = "target/release/mailslot-cli", dest = "/usr/bin/mailslot-cli", mode = "755" },
+	{ source = "target/release/mailslotd", dest = "/usr/bin/mailslotd", mode = "755" },
+	{ source = "../../data/mailslotd.service", dest = "/usr/lib/systemd/user/mailslotd.service", mode = "644" },
 	{ source = "../../data/ca.liminalhq.mailslot.desktop", dest = "/usr/share/applications/ca.liminalhq.mailslot.desktop", mode = "644" },
 	{ source = "../../data/ca.liminalhq.mailslot.metainfo.xml", dest = "/usr/share/metainfo/ca.liminalhq.mailslot.metainfo.xml", mode = "644" },
 	{ source = "../../data/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg", dest = "/usr/share/icons/hicolor/scalable/apps/ca.liminalhq.mailslot.svg", mode = "644" },

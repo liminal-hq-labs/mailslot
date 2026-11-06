@@ -63,6 +63,22 @@ async fn gateway_entries() -> Vec<(u16, String, String)> {
 	out
 }
 
+/// Waits up to a few seconds for the gateway's listing to satisfy `cond`, since a gateway may
+/// take a moment to show a mapping it has just accepted.
+async fn listed_eventually(
+	cond: impl Fn(&[(u16, String, String)]) -> bool,
+) -> Vec<(u16, String, String)> {
+	let mut entries = gateway_entries().await;
+	for _ in 0..5 {
+		if cond(&entries) {
+			break;
+		}
+		tokio::time::sleep(Duration::from_secs(1)).await;
+		entries = gateway_entries().await;
+	}
+	entries
+}
+
 #[tokio::test]
 #[ignore = "needs gateway"]
 async fn miniupnpd_map_renew_unmap() {
@@ -73,12 +89,17 @@ async fn miniupnpd_map_renew_unmap() {
 		m.lease() <= Duration::from_secs(300) && m.lease() > Duration::ZERO,
 		"mappings are never permanent"
 	);
-	let entries = gateway_entries().await;
+	let want = m.external().port();
+	let entries = listed_eventually(|e| {
+		e.iter()
+			.any(|(p, c, d)| *p == want && *c == lan && d.starts_with("Mailslot"))
+	})
+	.await;
 	assert!(
 		entries
 			.iter()
-			.any(|(p, c, d)| *p == m.external().port() && *c == lan && d.starts_with("Mailslot")),
-		"{entries:?}"
+			.any(|(p, c, d)| *p == want && *c == lan && d.starts_with("Mailslot")),
+		"mapped external port {want} not listed: {entries:?}"
 	);
 	m.renew().await.expect("renews");
 	assert!(
