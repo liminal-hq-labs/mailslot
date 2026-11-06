@@ -87,8 +87,9 @@ actionlint: ## actionlint on the workflows
 	docker run --rm -v "$(CURDIR):/repo" -w /repo $(ACTIONLINT_IMAGE) -color
 
 .PHONY: docs-lint
-docs-lint: ## markdownlint on every Markdown file
-	docker run --rm -v "$(CURDIR):/workspace" -w /workspace $(MARKDOWNLINT_IMAGE) "**/*.md" "#target" "#node_modules"
+docs-lint: ## markdownlint on every tracked or new Markdown file (git-ignored files are skipped)
+	files="$$(git ls-files --cached --others --exclude-standard '*.md')"; \
+	docker run --rm -v "$(CURDIR):/workspace" -w /workspace $(MARKDOWNLINT_IMAGE) $$files
 
 .PHONY: lint
 lint: fmt-check clippy headers style shellcheck hadolint actionlint docs-lint ## Everything that checks style

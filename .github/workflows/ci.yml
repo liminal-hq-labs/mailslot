@@ -456,9 +456,10 @@ jobs:
 
       - name: Lint Markdown
         id: lint
-        run: >-
-          docker run --rm -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace
-          davidanson/markdownlint-cli2:v0.17.2 "**/*.md" "#target" "#node_modules"
+        run: |
+          mapfile -t files < <(git ls-files --cached --others --exclude-standard '*.md')
+          docker run --rm -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
+            davidanson/markdownlint-cli2:v0.17.2 "${files[@]}"
 
       - name: Job summary
         if: always()
