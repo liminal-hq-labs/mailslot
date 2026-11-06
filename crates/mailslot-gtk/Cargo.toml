@@ -22,7 +22,7 @@ name = "mailslot"
 path = "src/main.rs"
 
 [dependencies]
-mailslot-core = { workspace = true, features = ["server", "client", "portmap", "tls"] }
+mailslot-core = { workspace = true, features = ["server", "client", "portmap", "tls", "watch", "discovery"] }
 adw = { package = "libadwaita", version = "0.9", features = ["v1_8"] }
 gtk = { package = "gtk4", version = "0.11", features = ["v4_20"] }
 gettext-rs = { version = "0.8", default-features = false, features = ["gettext-system"] }
