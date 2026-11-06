@@ -307,23 +307,42 @@ async fn build_urls(
 	tls_pin: &Option<String>,
 	cfg: &Config,
 ) -> Vec<ShareUrl> {
-	let mut hosts: Vec<(String, IpAddr)> = Vec::new();
+	// (label, address, virtual kind, default route)
+	let mut hosts: Vec<(String, IpAddr, Option<String>, bool)> = Vec::new();
 	if addr.ip().is_unspecified() {
 		for a in netinfo::lan_addrs().await {
-			hosts.push((a.interface, a.ip));
+			let kind = a.virtual_kind().map(str::to_owned);
+			hosts.push((a.interface, a.ip, kind, a.is_default_route));
 		}
 	} else if !addr.ip().is_loopback() {
-		hosts.push(("Selected address".into(), addr.ip()));
+		hosts.push(("Selected address".into(), addr.ip(), None, false));
 	}
+	// A saved preference only applies while that interface or address still exists; the sort
+	// is stable, so otherwise the ranked order stands.
 	let pref = cfg.network.interface.trim().to_owned();
 	if !pref.is_empty() {
-		hosts.sort_by_key(|(name, ip)| !(name == &pref || ip.to_string() == pref));
+		if hosts
+			.iter()
+			.any(|(name, ip, ..)| name == &pref || ip.to_string() == pref)
+		{
+			hosts.sort_by_key(|(name, ip, ..)| !(name == &pref || ip.to_string() == pref));
+		} else {
+			tracing::info!(
+				preferred = %pref,
+				"the preferred interface is not present; using the ranked order"
+			);
+		}
 	}
-	hosts.push(("This computer".into(), IpAddr::V4(Ipv4Addr::LOCALHOST)));
+	hosts.push((
+		"This computer".into(),
+		IpAddr::V4(Ipv4Addr::LOCALHOST),
+		None,
+		false,
+	));
 	let _ = inner;
 	hosts
 		.into_iter()
-		.map(|(label, ip)| {
+		.map(|(label, ip, virtual_kind, is_default_route)| {
 			let host = ip.to_string();
 			let mut link = MailslotLink::new(host.clone(), addr.port(), token.clone())
 				.with_label(cfg.sharing.link_label.trim());
@@ -335,6 +354,8 @@ async fn build_urls(
 				host,
 				url: link.drop_url(),
 				link: link.to_uri(),
+				virtual_kind,
+				is_default_route,
 			}
 		})
 		.collect()
@@ -958,6 +979,7 @@ async fn set_internet_inner(inner: Arc<Inner>, on: bool) {
 		if let Some((cancel, task)) = r.portmap.take() {
 			cancel.cancel();
 			let _ = tokio::time::timeout(Duration::from_secs(8), task).await;
+			inner.mutate(|s| s.internet_details = None);
 			set_internet_state(&inner, InternetState::Off);
 		}
 		if !on {
@@ -1021,11 +1043,13 @@ async fn portmap_task(inner: Arc<Inner>, cancel: CancellationToken, port: u16, b
 	let mut mapping = match portmap::open(&base).await {
 		Ok(m) => m,
 		Err(d) => {
+			inner.mutate(|s| s.internet_details = d.details.as_deref().cloned());
 			set_internet_state(&inner, InternetState::Failed(d));
 			cancel.cancelled().await;
 			return;
 		}
 	};
+	inner.mutate(|s| s.internet_details = Some(mapping.details().clone()));
 	let announce = |inner: &Inner, m: &portmap::ActiveMapping| {
 		let cfg = inner.config();
 		let mut link = MailslotLink::new(
