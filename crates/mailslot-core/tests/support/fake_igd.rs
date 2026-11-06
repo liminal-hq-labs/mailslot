@@ -27,6 +27,11 @@ pub struct FakeIgd {
 	pub mappings: Arc<Mutex<BTreeMap<u16, Mapping>>>,
 	pub external_ip: Arc<Mutex<String>>,
 	pub refuse_adds: Arc<Mutex<bool>>,
+	/// Behave like MiniUPnPd: refuse (606) a mapping whose internal client is not the
+	/// address the request came from.
+	pub require_own_address: Arc<Mutex<bool>>,
+	/// Internal clients seen in `AddPortMapping` requests, refused or not.
+	pub requested_clients: Arc<Mutex<Vec<String>>>,
 	cancel: CancellationToken,
 }
 
@@ -114,6 +119,8 @@ impl FakeIgd {
 		let mappings = Arc::new(Mutex::new(BTreeMap::new()));
 		let external_ip = Arc::new(Mutex::new(external_ip.to_owned()));
 		let refuse_adds = Arc::new(Mutex::new(false));
+		let require_own_address = Arc::new(Mutex::new(false));
+		let requested_clients = Arc::new(Mutex::new(Vec::new()));
 		let cancel = CancellationToken::new();
 
 		let c = cancel.clone();
@@ -138,10 +145,12 @@ impl FakeIgd {
 			refuse_adds.clone(),
 			cancel.clone(),
 		);
+		let (strict, seen) = (require_own_address.clone(), requested_clients.clone());
 		tokio::spawn(async move {
 			loop {
-				let (mut s, _) = tokio::select! { _ = c.cancelled() => break, r = http.accept() => match r { Ok(v) => v, Err(_) => continue } };
+				let (mut s, peer) = tokio::select! { _ = c.cancelled() => break, r = http.accept() => match r { Ok(v) => v, Err(_) => continue } };
 				let (m, ip, refuse) = (m.clone(), ip.clone(), refuse.clone());
+				let (strict, seen) = (strict.clone(), seen.clone());
 				tokio::spawn(async move {
 					let mut data = Vec::new();
 					let mut buf = [0u8; 4096];
@@ -176,7 +185,15 @@ impl FakeIgd {
 					} else if first.starts_with("GET /scpd.xml") {
 						("200 OK", "text/xml", scpd())
 					} else if first.starts_with("POST /control") {
-						let soap = soap_response(body, &m, &ip, &refuse);
+						let soap = soap_response(
+							body,
+							&m,
+							&ip,
+							&refuse,
+							peer.ip().to_string(),
+							&strict,
+							&seen,
+						);
 						("200 OK", "text/xml", soap)
 					} else {
 						("404 Not Found", "text/plain", String::new())
@@ -195,6 +212,8 @@ impl FakeIgd {
 			mappings,
 			external_ip,
 			refuse_adds,
+			require_own_address,
+			requested_clients,
 			cancel,
 		}
 	}
@@ -213,6 +232,9 @@ fn soap_response(
 	m: &Arc<Mutex<BTreeMap<u16, Mapping>>>,
 	ip: &Arc<Mutex<String>>,
 	refuse: &Arc<Mutex<bool>>,
+	peer: String,
+	strict: &Arc<Mutex<bool>>,
+	seen: &Arc<Mutex<Vec<String>>>,
 ) -> String {
 	if body.contains("GetExternalIPAddress") {
 		let ip = ip.lock().unwrap().clone();
@@ -221,7 +243,10 @@ fn soap_response(
 		));
 	}
 	if body.contains("AddPortMapping") {
-		if *refuse.lock().unwrap() {
+		seen.lock().unwrap().push(tag(body, "NewInternalClient"));
+		if *refuse.lock().unwrap()
+			|| (*strict.lock().unwrap() && tag(body, "NewInternalClient") != peer)
+		{
 			return fault(606, "Action not authorized");
 		}
 		let ext: u16 = tag(body, "NewExternalPort").parse().unwrap_or(0);

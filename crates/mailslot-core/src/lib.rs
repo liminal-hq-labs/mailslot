@@ -73,6 +73,7 @@
 #[cfg(feature = "client")]
 pub mod client;
 pub mod config;
+pub mod diagnostics;
 #[cfg(feature = "discovery")]
 pub mod discovery;
 #[cfg(feature = "server")]
@@ -87,6 +88,7 @@ pub mod outbox;
 #[cfg(feature = "portmap")]
 pub mod portmap;
 pub mod proto;
+pub mod redact;
 #[cfg(feature = "server")]
 pub mod server;
 pub mod snippets;

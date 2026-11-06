@@ -286,6 +286,9 @@ impl MailslotWindow {
 				}
 			})
 			.build();
+		let copy_diagnostics = gio::ActionEntry::builder("copy-diagnostics")
+			.activate(|win: &Self, _, _| win.copy_diagnostics())
+			.build();
 		let copy_snippet = gio::ActionEntry::builder("copy-snippet")
 			.parameter_type(Some(glib::VariantTy::STRING))
 			.activate(|win: &Self, _, param| {
@@ -334,6 +337,7 @@ impl MailslotWindow {
 			pause,
 			copy_link,
 			copy_external,
+			copy_diagnostics,
 			copy_snippet,
 			new_link,
 			clear,
@@ -491,6 +495,40 @@ impl MailslotWindow {
 		false
 	}
 
+	/// Copies a redacted report of the router attempt and the latest log lines. The log is
+	/// read on a worker thread so the main loop never waits on the disk.
+	fn copy_diagnostics(&self) {
+		let win = self.clone();
+		glib::spawn_future_local(async move {
+			let tail = gio::spawn_blocking(|| mailslot_log::read_tail(50))
+				.await
+				.unwrap_or_default();
+			let bridge = win.bridge();
+			let report = mailslot_core::diagnostics::report(
+				&bridge.state(),
+				&bridge.engine().config(),
+				win.selected_url().as_ref().map(|u| u.host.as_str()),
+				env!("CARGO_PKG_VERSION"),
+				&tail,
+			);
+			win.clipboard().set_text(&report);
+			win.toast(&gettext("Diagnostics copied"));
+		});
+	}
+
+	/// Where the log lives, for messages: the path with the home folder shortened.
+	fn log_hint() -> String {
+		let path = mailslot_log::log_path();
+		let text = match std::env::var_os("HOME") {
+			Some(h) => path
+				.strip_prefix(&h)
+				.map(|p| format!("~/{}", p.display()))
+				.unwrap_or_else(|_| path.display().to_string()),
+			None => path.display().to_string(),
+		};
+		gettext("Details are in the log: {path}").replace("{path}", &text)
+	}
+
 	fn clipboard(&self) -> gdk::Clipboard {
 		WidgetExt::display(self).clipboard()
 	}
@@ -575,6 +613,14 @@ impl MailslotWindow {
 				.map(|u| {
 					if u.host == "127.0.0.1" {
 						gettext("This computer (127.0.0.1)")
+					} else if let Some(kind) = &u.virtual_kind {
+						format!(
+							"{} ({}, {})",
+							u.label,
+							u.host,
+							gettext("{kind}, not reachable from other devices")
+								.replace("{kind}", kind)
+						)
 					} else {
 						format!("{} ({})", u.label, u.host)
 					}
@@ -607,7 +653,9 @@ impl MailslotWindow {
 			InternetState::Open { .. } => {
 				gettext("The port is open on your router for this session")
 			}
-			InternetState::Failed(_) => gettext("Could not open the port"),
+			InternetState::Failed(_) => {
+				gettext("Could not open the port. Copy diagnostics for details.")
+			}
 			InternetState::Off => gettext(
 				"Asks your router to forward the port with UPnP while you share. Off by default.",
 			),
@@ -622,7 +670,7 @@ impl MailslotWindow {
 		// Banner: most urgent message wins.
 		match &st.internet {
 			InternetState::Failed(d) => self.show_banner(
-				&d.message,
+				&format!("{} {}", d.message, Self::log_hint()),
 				Some(&gettext("Manual Steps")),
 				Some(Rc::new(glib::clone!(
 					#[weak(rename_to = win)]
@@ -631,7 +679,7 @@ impl MailslotWindow {
 				))),
 			),
 			InternetState::Open { warnings, .. } if !warnings.is_empty() => self.show_banner(
-				&warnings[0].message,
+				&format!("{} {}", warnings[0].message, Self::log_hint()),
 				Some(&gettext("Manual Steps")),
 				Some(Rc::new(glib::clone!(
 					#[weak(rename_to = win)]

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: mailslot\n"
 "Report-Msgid-Bugs-To: https://github.com/liminal-hq/mailslot/issues\n"
-"POT-Creation-Date: 2026-11-06 19:56+0000\n"
+"POT-Creation-Date: 2026-11-06 22:29+0000\n"
 "PO-Revision-Date: 2026-11-06 18:09+0000\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -170,6 +170,9 @@ msgstr "Copy SHA-256"
 msgid "Copy a ready-made command or prompt"
 msgstr "Copy a ready-made command or prompt"
 
+msgid "Copy diagnostics"
+msgstr ""
+
 msgid "Copy internet link"
 msgstr "Copy internet link"
 
@@ -183,8 +186,12 @@ msgstr "Copy link (Ctrl+Shift+C)"
 msgid "Could not open that image"
 msgstr "Could not open the port"
 
-msgid "Could not open the port"
+#, fuzzy
+msgid "Could not open the log folder"
 msgstr "Could not open the port"
+
+msgid "Could not open the port. Copy diagnostics for details."
+msgstr ""
 
 msgid "Could not reach that link"
 msgstr "Could not reach that link"
@@ -198,6 +205,14 @@ msgstr "Destination"
 
 msgid "Destination folder"
 msgstr "Destination folder"
+
+#, rust-format
+msgid "Details are in the log: {path}"
+msgstr ""
+
+#, fuzzy
+msgid "Diagnostics copied"
+msgstr "Link copied"
 
 msgid "Drop link"
 msgstr "Drop link"
@@ -396,6 +411,9 @@ msgstr "Open"
 
 msgid "Open Mailslot to see them"
 msgstr "Open Mailslot to see them"
+
+msgid "Open _Log Folder"
+msgstr ""
 
 msgid "Open to the internet"
 msgstr "Open to the internet"
@@ -743,6 +761,10 @@ msgstr "mailslot-cli command"
 
 msgid "wget command"
 msgstr "wget command"
+
+#, rust-format
+msgid "{kind}, not reachable from other devices"
+msgstr ""
 
 #, rust-format
 msgid "{} file received"

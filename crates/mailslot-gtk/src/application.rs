@@ -28,6 +28,18 @@ pub fn init_resources() {
 	});
 }
 
+/// Resource path of the bundled application icons, laid out like the hicolor theme.
+pub const ICON_RESOURCE_PATH: &str = "/ca/liminalhq/mailslot/icons";
+
+/// Adds the bundled application icons to the icon theme of the default display, so the
+/// application and symbolic icons resolve without being installed into the system theme.
+pub fn load_icons() {
+	let Some(display) = gdk::Display::default() else {
+		return;
+	};
+	gtk::IconTheme::for_display(&display).add_resource_path(ICON_RESOURCE_PATH);
+}
+
 /// Installs the application stylesheet for the default display.
 pub fn load_css() {
 	let Some(display) = gdk::Display::default() else {
@@ -106,6 +118,7 @@ pub fn build_application() -> adw::Application {
 
 	app.connect_startup(|app| {
 		init_resources();
+		load_icons();
 		load_css();
 		gtk::Window::set_default_icon_name(APP_ID);
 		for (action, accels) in [
@@ -231,6 +244,29 @@ pub fn build_application() -> adw::Application {
 				if let Some(w) = window.borrow().as_ref() {
 					about_dialog().present(Some(w));
 				}
+			}),
+		);
+	}
+	{
+		let window = window.clone();
+		add(
+			&app,
+			"open-log-folder",
+			Box::new(move |_| {
+				let dir = gio::File::for_path(mailslot_log::log_dir());
+				let parent = window.borrow().clone();
+				let toast_window = parent.clone();
+				gtk::FileLauncher::new(Some(&dir)).launch(
+					parent.as_ref(),
+					gio::Cancellable::NONE,
+					move |res| {
+						if res.is_err()
+							&& let Some(w) = &toast_window
+						{
+							w.toast(&gettext("Could not open the log folder"));
+						}
+					},
+				);
 			}),
 		);
 	}

@@ -1,0 +1,22 @@
+[package]
+name = "mailslot-log"
+description = "Logging for the Mailslot frontends: a rotating, private log file with secrets redacted"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+authors.workspace = true
+publish = false
+keywords = ["logging", "tracing"]
+
+[dependencies]
+mailslot-core = { workspace = true, default-features = false }
+directories.workspace = true
+tracing.workspace = true
+tracing-appender.workspace = true
+tracing-subscriber.workspace = true
+
+[dev-dependencies]
+tempfile = "3"

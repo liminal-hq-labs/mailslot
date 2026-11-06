@@ -3,7 +3,7 @@
 // (c) Copyright 2026 Liminal HQ, Scott Morris
 // SPDX-License-Identifier: Apache-2.0 OR MIT
 
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 use std::time::SystemTime;
 
@@ -172,6 +172,26 @@ pub struct Diagnostic {
 	pub kind: DiagnosticKind,
 	/// Message fit for display.
 	pub message: String,
+	/// What was known about the router and the address used when this was produced.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub details: Option<Box<InternetDetails>>,
+}
+
+/// Facts about a router mapping attempt, for diagnostics. Never contains the token.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct InternetDetails {
+	/// The router's address.
+	pub gateway: Option<IpAddr>,
+	/// Manufacturer and model from the router's device description, when it gave one.
+	pub router: Option<String>,
+	/// The local address the router was asked to forward to.
+	pub internal_client: Option<IpAddr>,
+	/// The interface that address belongs to.
+	pub interface: Option<String>,
+	/// The router's raw error code, when it refused a request.
+	pub error_code: Option<u16>,
+	/// The router's raw error text.
+	pub error_text: Option<String>,
 }
 
 /// State of internet exposure through the router.
@@ -294,6 +314,13 @@ pub struct ShareUrl {
 	pub url: String,
 	/// Full `mailslot://` link.
 	pub link: String,
+	/// Kind of virtual interface (`Docker`, `VPN`, …) this address sits on, which other
+	/// devices usually cannot reach. `None` for a physical interface.
+	#[serde(default)]
+	pub virtual_kind: Option<String>,
+	/// The system sends internet traffic from this address.
+	#[serde(default)]
+	pub is_default_route: bool,
 }
 
 impl std::fmt::Debug for ShareUrl {
@@ -320,6 +347,9 @@ pub struct EngineState {
 	pub tls_pin: Option<String>,
 	/// Router exposure.
 	pub internet: InternetState,
+	/// What is known about the router and the address used for the latest attempt.
+	#[serde(default)]
+	pub internet_details: Option<InternetDetails>,
 	/// Received files this session.
 	pub uploads: Vec<UploadSnapshot>,
 	/// Outgoing transfers this session.
@@ -345,6 +375,7 @@ impl Default for EngineState {
 			expires_at: None,
 			tls_pin: None,
 			internet: InternetState::Off,
+			internet_details: None,
 			uploads: Vec::new(),
 			sends: Vec::new(),
 			received_files: 0,

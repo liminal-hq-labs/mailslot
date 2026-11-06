@@ -161,4 +161,6 @@ crates/
   mailslot-core/  engine, protocol, server, client, config, portmap, netinfo
   mailslot-cli/   mailslot-cli binary
   mailslot-gtk/   GTK app, binary `mailslot`
+  mailslot-ipc/   JSON-RPC API and the `mailslotd` daemon
+  mailslot-log/   tracing subscriber shared by the frontends: log file, rotation, redaction
 ```

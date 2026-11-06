@@ -46,4 +46,13 @@ fn window_builds_and_starts_stopped() {
 			.and_downcast::<adw::Banner>()
 			.is_some_and(|b| !b.is_revealed())
 	);
+	// The diagnostics row is in the Internet group and its action is registered.
+	let row = find_by_id(&win, "diagnostics_row").expect("diagnostics row");
+	assert!(win.lookup_action("copy-diagnostics").is_some());
+	assert_eq!(
+		row.downcast_ref::<adw::ButtonRow>()
+			.and_then(|r| r.action_name())
+			.as_deref(),
+		Some("win.copy-diagnostics")
+	);
 }

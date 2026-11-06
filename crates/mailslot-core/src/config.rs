@@ -374,9 +374,28 @@ impl Config {
 	/// Loads `config.toml`, returning defaults when the file does not exist.
 	pub async fn load(paths: &Paths) -> Result<Self> {
 		match tokio::fs::read_to_string(paths.config_file()).await {
-			Ok(text) => Self::from_toml(&text),
-			Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Self::default()),
-			Err(e) => Err(e.into()),
+			Ok(text) => {
+				let loaded = Self::from_toml(&text);
+				match &loaded {
+					Ok(_) => {
+						tracing::debug!(path = %paths.config_file().display(), "loaded settings")
+					}
+					Err(e) => tracing::error!(
+						path = %paths.config_file().display(),
+						error = %e,
+						"the settings file could not be read"
+					),
+				}
+				loaded
+			}
+			Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+				tracing::debug!("no settings file yet; using defaults");
+				Ok(Self::default())
+			}
+			Err(e) => {
+				tracing::error!(path = %paths.config_file().display(), error = %e, "could not read the settings file");
+				Err(e.into())
+			}
 		}
 	}
 
@@ -403,6 +422,7 @@ pub async fn load_or_create_token(paths: &Paths) -> Result<Token> {
 	}
 	let token = Token::generate()?;
 	save_token(paths, &token).await?;
+	tracing::info!(path = %paths.token_file().display(), "created a new token file");
 	Ok(token)
 }
 

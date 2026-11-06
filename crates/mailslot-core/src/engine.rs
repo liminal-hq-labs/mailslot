@@ -224,7 +224,20 @@ impl EngineBuilder {
 				.await
 				.map_err(|e| Error::State(e.to_string()))??
 		};
-		config.validate()?;
+		if let Err(e) = config.validate() {
+			tracing::error!(error = %e, "the settings are not valid");
+			return Err(e);
+		}
+		tracing::info!(
+			bind = %config.sharing.bind,
+			port = config.sharing.port,
+			https = config.security.https,
+			upnp = config.network.upnp,
+			mdns = config.network.mdns,
+			version = env!("CARGO_PKG_VERSION"),
+			"engine ready"
+		);
+		crate::redact::add_secret(token.expose());
 		let (tx, _) = broadcast::channel(EVENT_CAPACITY);
 		let history = History::new(self.paths.history_file());
 		Ok(Engine {
@@ -307,23 +320,58 @@ async fn build_urls(
 	tls_pin: &Option<String>,
 	cfg: &Config,
 ) -> Vec<ShareUrl> {
-	let mut hosts: Vec<(String, IpAddr)> = Vec::new();
+	// (label, address, virtual kind, default route)
+	let mut hosts: Vec<(String, IpAddr, Option<String>, bool)> = Vec::new();
 	if addr.ip().is_unspecified() {
 		for a in netinfo::lan_addrs().await {
-			hosts.push((a.interface, a.ip));
+			let kind = a.virtual_kind().map(str::to_owned);
+			hosts.push((a.interface, a.ip, kind, a.is_default_route));
 		}
 	} else if !addr.ip().is_loopback() {
-		hosts.push(("Selected address".into(), addr.ip()));
+		hosts.push(("Selected address".into(), addr.ip(), None, false));
 	}
+	// A saved preference only applies while that interface or address still exists; the sort
+	// is stable, so otherwise the ranked order stands.
 	let pref = cfg.network.interface.trim().to_owned();
 	if !pref.is_empty() {
-		hosts.sort_by_key(|(name, ip)| !(name == &pref || ip.to_string() == pref));
+		if hosts
+			.iter()
+			.any(|(name, ip, ..)| name == &pref || ip.to_string() == pref)
+		{
+			hosts.sort_by_key(|(name, ip, ..)| !(name == &pref || ip.to_string() == pref));
+		} else {
+			tracing::info!(
+				preferred = %pref,
+				"the preferred interface is not present; using the ranked order"
+			);
+		}
 	}
-	hosts.push(("This computer".into(), IpAddr::V4(Ipv4Addr::LOCALHOST)));
+	if let Some((name, ip, kind, default)) = hosts.first() {
+		let why = if !pref.is_empty() && (name == &pref || ip.to_string() == pref) {
+			"the saved preference"
+		} else if *default {
+			"it is on the default route"
+		} else if kind.is_some() {
+			"no physical interface was found"
+		} else if addr.ip().is_unspecified() {
+			"it ranks first among local addresses"
+		} else {
+			"it is the address sharing is bound to"
+		};
+		tracing::info!(interface = %name, address = %ip, reason = why, "chose the address for the link");
+	} else if !addr.ip().is_loopback() {
+		tracing::warn!("no network address was found; the link only works on this computer");
+	}
+	hosts.push((
+		"This computer".into(),
+		IpAddr::V4(Ipv4Addr::LOCALHOST),
+		None,
+		false,
+	));
 	let _ = inner;
 	hosts
 		.into_iter()
-		.map(|(label, ip)| {
+		.map(|(label, ip, virtual_kind, is_default_route)| {
 			let host = ip.to_string();
 			let mut link = MailslotLink::new(host.clone(), addr.port(), token.clone())
 				.with_label(cfg.sharing.link_label.trim());
@@ -335,6 +383,8 @@ async fn build_urls(
 				host,
 				url: link.drop_url(),
 				link: link.to_uri(),
+				virtual_kind,
+				is_default_route,
 			}
 		})
 		.collect()
@@ -476,6 +526,11 @@ impl Engine {
 			let Some(r) = running.as_ref() else {
 				return Err(Error::State("not sharing".into()));
 			};
+			tracing::info!(
+				paused,
+				"uploads {}",
+				if paused { "paused" } else { "resumed" }
+			);
 			r.server.set_accepting(!paused);
 			drop(running);
 			inner.mutate(|s| s.paused = paused);
@@ -519,6 +574,8 @@ impl Engine {
 				refresh_internet_url(&inner, &new);
 			}
 			drop(running);
+			crate::redact::add_secret(new.expose());
+			tracing::info!("the token was replaced; old links no longer work");
 			inner.emit(Event::TokenRotated);
 			inner.emit_state();
 			Ok(new)
@@ -715,11 +772,16 @@ fn start_advertising(
 	);
 	match result {
 		Ok(a) => {
+			tracing::info!(
+				port,
+				name = a.fullname(),
+				"announcing on the local network with mDNS"
+			);
 			inner.mutate(|s| s.advertising = true);
 			Some(a)
 		}
 		Err(e) => {
-			tracing::warn!("mDNS advertising failed: {e}");
+			tracing::warn!(error = %e, "mDNS advertising failed");
 			inner.mutate(|s| s.advertising = false);
 			None
 		}
@@ -732,7 +794,16 @@ async fn start_inner(inner: Arc<Inner>) -> Result<EngineState> {
 		return Err(Error::State("already sharing".into()));
 	}
 	let cfg = inner.config();
-	cfg.validate()?;
+	if let Err(e) = cfg.validate() {
+		tracing::error!(error = %e, "cannot start sharing: the settings are not valid");
+		return Err(e);
+	}
+	tracing::info!(
+		bind = %cfg.sharing.bind,
+		port = cfg.sharing.port,
+		https = cfg.security.https,
+		"starting to share"
+	);
 	inner.mutate(|s| {
 		s.status = Status::Starting;
 		s.restart_required = false;
@@ -745,6 +816,7 @@ async fn start_inner(inner: Arc<Inner>) -> Result<EngineState> {
 			*running = Some(r);
 		}
 		Err(e) => {
+			tracing::error!(error = %e, "could not start the server");
 			inner.mutate(|s| s.status = Status::Stopped);
 			inner.emit_state();
 			return Err(e);
@@ -880,6 +952,18 @@ async fn start_server(inner: &Arc<Inner>, cfg: &Config) -> Result<Running> {
 		}
 	};
 	let urls = build_urls(inner, addr, &token, &pin, cfg).await;
+	tracing::info!(
+		%addr,
+		https = pin.is_some(),
+		expires_in_secs = expires_at.and_then(|t| t.duration_since(SystemTime::now()).ok()).map(|d| d.as_secs()),
+		addresses = ?urls.iter().map(|u| format!(
+			"{}{}{}",
+			u.host,
+			if u.is_default_route { " (default route)" } else { "" },
+			u.virtual_kind.as_deref().map(|k| format!(" ({k})")).unwrap_or_default()
+		)).collect::<Vec<_>>(),
+		"sharing"
+	);
 	inner.mutate(|s| {
 		s.status = Status::Sharing;
 		s.addr = Some(addr);
@@ -902,6 +986,7 @@ async fn start_server(inner: &Arc<Inner>, cfg: &Config) -> Result<Running> {
 async fn stop_inner(inner: Arc<Inner>, reason: StopReason) {
 	let mut guard = inner.running.lock().await;
 	let Some(mut r) = guard.take() else { return };
+	tracing::info!(?reason, "stopping");
 	inner.mutate(|s| s.status = Status::Stopping);
 	inner.emit_state();
 	r.cancel.cancel();
@@ -931,6 +1016,7 @@ async fn stop_inner(inner: Arc<Inner>, reason: StopReason) {
 			u.reason = Some("sharing stopped".into());
 		}
 	});
+	tracing::info!(?reason, "stopped");
 	inner.emit(Event::Internet(InternetEvent::State(InternetState::Off)));
 	inner.emit(Event::Stopped(reason));
 	inner.emit_state();
@@ -958,6 +1044,7 @@ async fn set_internet_inner(inner: Arc<Inner>, on: bool) {
 		if let Some((cancel, task)) = r.portmap.take() {
 			cancel.cancel();
 			let _ = tokio::time::timeout(Duration::from_secs(8), task).await;
+			inner.mutate(|s| s.internet_details = None);
 			set_internet_state(&inner, InternetState::Off);
 		}
 		if !on {
@@ -997,6 +1084,7 @@ async fn portmap_task(inner: Arc<Inner>, cancel: CancellationToken, port: u16, b
 	let mut base = inner.portmap_overrides.clone().unwrap_or_default();
 	base.local_port = port;
 	if !bind_ip.is_unspecified() && base.local_ip.is_none() {
+		tracing::info!(%bind_ip, "sharing is bound to one address, so the router is asked to forward to it");
 		base.local_ip = Some(bind_ip);
 	}
 	base.public_ip = public_ip;
@@ -1021,11 +1109,13 @@ async fn portmap_task(inner: Arc<Inner>, cancel: CancellationToken, port: u16, b
 	let mut mapping = match portmap::open(&base).await {
 		Ok(m) => m,
 		Err(d) => {
+			inner.mutate(|s| s.internet_details = d.details.as_deref().cloned());
 			set_internet_state(&inner, InternetState::Failed(d));
 			cancel.cancelled().await;
 			return;
 		}
 	};
+	inner.mutate(|s| s.internet_details = Some(mapping.details().clone()));
 	let announce = |inner: &Inner, m: &portmap::ActiveMapping| {
 		let cfg = inner.config();
 		let mut link = MailslotLink::new(

@@ -16,6 +16,10 @@
 				<attribute name="action">app.preferences</attribute>
 			</item>
 			<item>
+				<attribute name="label" translatable="yes">Open _Log Folder</attribute>
+				<attribute name="action">app.open-log-folder</attribute>
+			</item>
+			<item>
 				<attribute name="label" translatable="yes">_Keyboard Shortcuts</attribute>
 				<attribute name="action">app.shortcuts</attribute>
 			</item>
@@ -288,6 +292,13 @@
 																							<object class="AdwButtonRow" id="manual_row">
 																								<property name="title" translatable="yes">Port-forward instructions…</property>
 																								<property name="start-icon-name">help-about-symbolic</property>
+																							</object>
+																						</child>
+																						<child>
+																							<object class="AdwButtonRow" id="diagnostics_row">
+																								<property name="title" translatable="yes">Copy diagnostics</property>
+																								<property name="start-icon-name">edit-copy-symbolic</property>
+																								<property name="action-name">win.copy-diagnostics</property>
 																							</object>
 																						</child>
 																					</object>

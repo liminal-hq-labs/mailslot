@@ -7,6 +7,8 @@
 
 mod support;
 
+use std::io::Write;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use mailslot_core::events::{DiagnosticKind, InternetState};
@@ -73,6 +75,53 @@ async fn refused_mappings_are_explained() {
 	let d = portmap::open(&opts(&igd)).await.unwrap_err();
 	assert_eq!(d.kind, DiagnosticKind::MappingRefused);
 	assert!(d.message.contains("UPnP"));
+	assert!(d.message.contains("UPnP error 606: Action not authorized"));
+}
+
+#[tokio::test]
+async fn internal_client_is_the_address_used_to_reach_the_router() {
+	// No override: the address comes from the route to the router, which on loopback is
+	// loopback itself, and a MiniUPnPd-style router accepts it.
+	let igd = FakeIgd::start("203.0.113.7").await;
+	*igd.require_own_address.lock().unwrap() = true;
+	let mut o = opts(&igd);
+	o.local_ip = None;
+	let m = portmap::open(&o).await.expect("mapping");
+	assert_eq!(*igd.requested_clients.lock().unwrap(), vec!["127.0.0.1"]);
+	assert_eq!(
+		m.details().internal_client,
+		Some("127.0.0.1".parse().unwrap())
+	);
+	assert_eq!(m.details().gateway, Some("127.0.0.1".parse().unwrap()));
+	m.remove().await.unwrap();
+}
+
+#[tokio::test]
+async fn error_606_names_the_internal_client_and_the_network_problem() {
+	let igd = FakeIgd::start("203.0.113.7").await;
+	*igd.require_own_address.lock().unwrap() = true;
+	let mut o = opts(&igd);
+	// An address that is not this machine's and not on the router's network.
+	o.local_ip = Some("172.19.0.1".parse().unwrap());
+	let d = portmap::open(&o).await.unwrap_err();
+	assert_eq!(d.kind, DiagnosticKind::MappingRefused);
+	assert!(
+		d.message.contains("UPnP error 606: Action not authorized"),
+		"{}",
+		d.message
+	);
+	assert!(d.message.contains("172.19.0.1"), "{}", d.message);
+	assert!(
+		d.message.contains("not on the router's network"),
+		"{}",
+		d.message
+	);
+	assert!(d.message.contains("UPnP is enabled for this network"));
+	let details = d.details.expect("details");
+	assert_eq!(details.error_code, Some(606));
+	assert_eq!(details.internal_client, Some("172.19.0.1".parse().unwrap()));
+	assert_eq!(*igd.requested_clients.lock().unwrap(), vec!["172.19.0.1"]);
+	assert_eq!(igd.mapping_count(), 0);
 }
 
 #[tokio::test]
@@ -121,4 +170,79 @@ async fn no_gateway_is_reported() {
 	let d = portmap::open(&o).await.unwrap_err();
 	assert_eq!(d.kind, DiagnosticKind::NoGateway);
 	let _ = InternetState::Off;
+}
+
+#[derive(Clone, Default)]
+struct Captured(Arc<Mutex<Vec<u8>>>);
+
+impl Write for Captured {
+	fn write(&mut self, b: &[u8]) -> std::io::Result<usize> {
+		self.0.lock().unwrap().extend_from_slice(b);
+		Ok(b.len())
+	}
+	fn flush(&mut self) -> std::io::Result<()> {
+		Ok(())
+	}
+}
+
+impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for Captured {
+	type Writer = Captured;
+	fn make_writer(&'a self) -> Captured {
+		self.clone()
+	}
+}
+
+/// A subscriber that captures everything at debug level, active until the guard drops.
+fn capture() -> (Captured, tracing::subscriber::DefaultGuard) {
+	let sink = Captured::default();
+	let subscriber = tracing_subscriber::fmt()
+		.with_max_level(tracing::Level::DEBUG)
+		.with_ansi(false)
+		.with_writer(sink.clone())
+		.finish();
+	(sink, tracing::subscriber::set_default(subscriber))
+}
+
+fn text(sink: &Captured) -> String {
+	String::from_utf8(sink.0.lock().unwrap().clone()).unwrap()
+}
+
+// The test runtime is single-threaded, so the thread-local subscriber sees every event.
+#[tokio::test]
+async fn core_emits_the_portmap_conversation() {
+	let (sink, _guard) = capture();
+	let igd = FakeIgd::start("203.0.113.7").await;
+	let mut o = opts(&igd);
+	o.local_ip = None;
+	let mut m = portmap::open(&o).await.expect("mapping");
+	m.renew().await.unwrap();
+	m.remove().await.unwrap();
+	let out = text(&sink);
+	for needle in [
+		"asking the router to open a port",
+		"found a UPnP gateway",
+		"router=\"Fake IGD\"",
+		"GetExternalIPAddress answered",
+		"AddPortMapping request",
+		"internal_client=127.0.0.1",
+		"lease_secs=3600",
+		"AddPortMapping accepted",
+		"router port mapping is open",
+		"renewed router port mapping",
+		"removed router port mapping",
+	] {
+		assert!(out.contains(needle), "missing `{needle}` in:\n{out}");
+	}
+}
+
+#[tokio::test]
+async fn core_logs_the_router_refusal_with_its_code() {
+	let (sink, _guard) = capture();
+	let igd = FakeIgd::start("203.0.113.7").await;
+	*igd.refuse_adds.lock().unwrap() = true;
+	let _ = portmap::open(&opts(&igd)).await.unwrap_err();
+	let out = text(&sink);
+	assert!(out.contains("WARN"), "{out}");
+	assert!(out.contains("AddPortMapping refused"), "{out}");
+	assert!(out.contains("606"), "{out}");
 }
