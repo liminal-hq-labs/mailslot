@@ -11,7 +11,7 @@ Each decision is numbered and stays here even when superseded, with a note on wh
 | D5 | HTTP server | axum 0.8 on tokio | Streams bodies with a running byte cap, graceful shutdown, and TLS through `axum-server` |
 | D6 | Core-first architecture | `mailslot-core` has no GTK dependency and exposes an `Engine` with commands, an event stream and a state snapshot. The GUI and CLI are thin shells | Any frontend (Tauri, Qt, WinUI, a CLI) can sit on the same engine. CI guards the boundary with a `core-embed` job |
 | D7 | Async everywhere | All I/O in core is async on tokio. No blocking calls in async paths, enforced by clippy `disallowed-methods` and `await_holding_lock` | The server must stay responsive under load and the GTK main loop must never block |
-| D8 | Thread bridge | The GTK side consumes the engine's event stream with `glib::spawn_future_local`. Commands go back through `Engine` methods | GObjects never leave the main thread |
+| D8 | Thread bridge | Each `Engine` command is spawned on the engine's tokio runtime and awaited from the GLib main loop, and the main loop reads a broadcast event stream with `glib::spawn_future_local`. Only plain data crosses between the two | GObjects never leave the main thread |
 | D9 | Settings storage | TOML with `serde` at the XDG config directory, mode `0600` | GSettings needs schema installation, which plain `cargo run` skips. TOML works under Flatpak and is shared with the CLI |
 | D10 | Notifications | `gio::Notification` through `Application::send_notification` | Uses the notification portal under Flatpak automatically |
 | D11 | QR code | `qrcode` rendered to a `gdk::MemoryTexture` shown in a `gtk::Picture`, nearest-neighbour with a white quiet zone | No SVG loader dependency and it stays crisp |

@@ -1002,7 +1002,7 @@ async fn portmap_task(inner: Arc<Inner>, cancel: CancellationToken, port: u16, b
 	base.public_ip = public_ip;
 	let expires = inner.state().expires_at;
 	let lease_for = |now: SystemTime| -> Duration {
-		let cap = Duration::from_secs(3600);
+		let cap = inner.config().network.upnp_lease();
 		match expires {
 			Some(t) => t
 				.duration_since(now)

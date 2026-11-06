@@ -247,7 +247,7 @@ Settings live in `$XDG_CONFIG_HOME/ca.liminalhq.mailslot/config.toml`. The deskt
 | Key | Default | Meaning |
 |---|---|---|
 | `network.upnp` | `false` | Remember the "Open to the internet" choice |
-| `network.upnp_lease_minutes` | `60` | Mapping lease, capped by the link expiry |
+| `network.upnp_lease_minutes` | `60` | Mapping lease, 5 to 60 minutes, also capped by the link expiry |
 | `network.public_ip_lookup` | `false` | Allow the one-request public address lookup |
 | `network.interface` | `"auto"` | Interface used for the displayed link |
 | `network.mdns` | `false` | Announce this receiver on the LAN with mDNS, see [Discovery on the LAN](#discovery-on-the-lan) |
@@ -289,12 +289,12 @@ Sharing can be paused without losing the link. While paused the server stays bou
 
 ## Send queue and watch
 
-Every send goes through a queue owned by the engine. Entries record the file, the destination link, the upload id and the state (waiting, sending, done, failed). The queue is saved in the data directory and survives restarts, so interrupted transfers resume from the receiver's offset on the next start.
+Sending has two layers. The engine's `send` command and the client resume an interrupted upload from the receiver's offset and retry with backoff, and the Send page uses them directly. Only `mailslot-cli watch` keeps a persisted queue (`mailslot-core`'s `outbox` module, saved in the data directory), so files waiting when the process stops are sent on the next start. The desktop app does not persist its Send page queue: sends in flight are listed for the session and are lost when the app quits. Moving the persisted queue into the engine for the Send page is planned and is not part of this release.
 
 - **Retry.** Failed uploads retry with exponential backoff and jitter, capped at five minutes. A permanent refusal (`404`, `410`, `413`, `415`) is not retried.
 - **Dedupe.** Before sending, the client asks `have?sha256=…` and skips content the receiver already holds.
-- **Watch.** `mailslot-cli watch DIR LINK` and the app's Outbox folder watch a folder with inotify, wait until a file stops changing, then queue it. Hash-based dedupe keeps unchanged files from being sent twice. Subfolders are included, and files that were present before watching started are queued once.
-- **Control.** The Send page and `mailslot-cli status` show the queue, with pause, cancel and retry per entry.
+- **Watch.** `mailslot-cli watch DIR LINK` watches a folder with inotify, waits until a file stops changing, then queues it in the persisted outbox. Hash-based dedupe keeps unchanged files from being sent twice. Subfolders are included, and files that were present before watching started are queued once. The app has no folder watcher yet.
+- **Control.** The Send page lists this session's sends with progress and a cancel button. A per-entry pause and retry, and a queue view in `mailslot-cli status`, are not built yet.
 
 ## Discovery on the LAN
 
