@@ -1,0 +1,16 @@
+# nextest profiles: a quick default and a CI profile that writes JUnit XML.
+#
+# (c) Copyright 2026 Liminal HQ, Scott Morris
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+
+[profile.default]
+retries = 0
+slow-timeout = { period = "30s", terminate-after = 4 }
+
+[profile.ci]
+retries = 2
+failure-output = "immediate-final"
+slow-timeout = { period = "30s", terminate-after = 4 }
+
+[profile.ci.junit]
+path = "junit.xml"

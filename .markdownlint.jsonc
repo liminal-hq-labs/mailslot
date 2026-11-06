@@ -1,0 +1,14 @@
+{
+  "default": true,
+  // Long single-line paragraphs are intentional (AGENTS.md: don't hard-wrap markdown prose).
+  "MD013": false,
+  // Tables and the README hero use inline HTML.
+  "MD033": false,
+  // Hard tabs are house style (tab-indented code samples).
+  "MD010": false,
+  // Compact tables are fine.
+  "MD060": false,
+  "MD024": { "siblings_only": true },
+  // A README may open with its title and then a centred hero.
+  "MD041": false
+}

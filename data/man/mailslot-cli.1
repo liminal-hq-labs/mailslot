@@ -1,0 +1,110 @@
+.\" Manual page for mailslot-cli.
+.\"
+.\" (c) Copyright 2026 Liminal HQ, Scott Morris
+.\" SPDX-License-Identifier: Apache-2.0 OR MIT
+.TH MAILSLOT-CLI 1 "November 2026" "mailslot-cli 0.1.0" "User Commands"
+.SH NAME
+mailslot-cli \- send files to a Mailslot and receive them headless
+.SH SYNOPSIS
+.B mailslot-cli
+.I COMMAND
+.RI [ ARGS ]
+.SH DESCRIPTION
+.B mailslot-cli
+is the command-line companion of the Mailslot desktop app.
+It uploads files, folders and standard input to a Mailslot link with resume, retry and duplicate detection,
+and runs a headless receiver.
+It does not need GTK.
+.PP
+A Mailslot link looks like
+.BR mailslot://HOST:PORT/TOKEN .
+The query parameters
+.B tls=1
+and
+.BI pin= BASE64
+select HTTPS and pin the server's public key.
+.B label=NAME
+names the link.
+Plain
+.BI http:// HOST : PORT / TOKEN /
+URLs are accepted too.
+.SH COMMANDS
+.TP
+.BR send " [" \-\-name " " \fINAME\fR "] [" \-\-jobs " " \fIN\fR "] [" \-\-limit " " \fIRATE\fR "] [" \-\-json "] " \fIFILE\fR... " " \fILINK\fR
+Upload files, folders (recursively) or standard input (use
+.B \-
+as the file).
+Interrupted uploads resume from the offset the receiver reports.
+Failed requests retry with backoff.
+The SHA-256 is sent first, so the receiver verifies the file and skips content it already holds.
+.B \-\-jobs
+sets how many files go in parallel, and
+.B \-\-limit
+caps bandwidth (for example
+.BR 2M ).
+.B \-\-json
+prints one JSON object per event.
+The exit status is non-zero if any file failed.
+.TP
+.BR serve " [" \-\-bind " " \fIADDR\fR "] [" \-\-dir " " \fIDIR\fR "] [" \-\-port " " \fIPORT\fR "] [" \-\-max\-mb " " \fIN\fR "]"
+Run a headless receiver.
+Prints one line,
+.BR "URL http://HOST:PORT/TOKEN/" ,
+to standard output once it is listening, then serves until SIGTERM or SIGINT.
+Port mappings made through UPnP are removed on exit.
+.TP
+.BR watch " " \fIDIR\fR " " \fILINK\fR
+Push new and changed files in a folder to a link.
+.TP
+.B pair
+Print the link and a QR code for the configured receiver.
+.TP
+.B status
+Show the configured receiver's state, link and recent transfers.
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Print help.
+.TP
+.BR \-V ", " \-\-version
+Print the version.
+.SH FILES
+.TP
+.I $XDG_CONFIG_HOME/ca.liminalhq.mailslot/config.toml
+Settings shared with the desktop app. Flags override it.
+.TP
+.I $XDG_DATA_HOME/ca.liminalhq.mailslot/
+History and TLS certificate.
+.SH EXAMPLES
+Send a file:
+.PP
+.RS
+mailslot-cli send report.zip 'mailslot://192.168.1.20:8931/TOKEN'
+.RE
+.PP
+Send a stream:
+.PP
+.RS
+tar c project | mailslot-cli send \-\-name project.tar \- 'mailslot://192.168.1.20:8931/TOKEN'
+.RE
+.PP
+Receive on a server:
+.PP
+.RS
+mailslot-cli serve \-\-dir /srv/drop
+.RE
+.SH SECURITY
+The link is the credential.
+Anyone who has it can send files to the receiver.
+Keep links private and use "New link" in the app, or restart
+.B serve
+with a new token, if one leaks.
+.SH SEE ALSO
+.BR curl (1),
+.BR sha256sum (1)
+.PP
+https://github.com/liminal-hq/mailslot
+.SH AUTHORS
+Liminal HQ, Scott Morris.
+.SH LICENSE
+Apache-2.0 OR MIT.

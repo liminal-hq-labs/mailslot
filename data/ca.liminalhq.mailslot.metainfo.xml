@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AppStream metadata for Mailslot.
+
+  (c) Copyright 2026 Liminal HQ, Scott Morris
+  SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<component type="desktop-application">
+	<id>ca.liminalhq.mailslot</id>
+	<launchable type="desktop-id">ca.liminalhq.mailslot.desktop</launchable>
+
+	<name>Mailslot</name>
+	<summary>A private drop slot for files sent your way</summary>
+	<developer id="ca.liminalhq">
+		<name>Liminal HQ</name>
+	</developer>
+
+	<metadata_license>CC0-1.0</metadata_license>
+	<project_license>Apache-2.0 OR MIT</project_license>
+
+	<description>
+		<p>Mailslot receives files through a private link. Start sharing, hand out the link, and files sent to it land in a folder on your computer with a SHA-256 checksum. Nothing is ever served back.</p>
+		<p>It also sends. The same app and its command-line companion push files to another Mailslot, resume interrupted transfers and skip files the other side already has.</p>
+		<p>Features:</p>
+		<ul>
+			<li>A web upload page that works on phones, plus curl and Mailslot clients</li>
+			<li>QR code and mailslot:// links for quick pairing</li>
+			<li>Resumable uploads and duplicate detection</li>
+			<li>Link expiry, size and quota limits, bad-token lockout and optional HTTPS</li>
+			<li>Optional UPnP port mapping that is time-limited and clearly shown</li>
+			<li>A Send page with a queue that survives restarts</li>
+		</ul>
+	</description>
+
+	<categories>
+		<category>Network</category>
+		<category>FileTransfer</category>
+	</categories>
+	<keywords>
+		<keyword>file transfer</keyword>
+		<keyword>upload</keyword>
+		<keyword>share</keyword>
+		<keyword>send</keyword>
+		<keyword>receive</keyword>
+		<keyword>QR code</keyword>
+	</keywords>
+
+	<branding>
+		<color type="primary" scheme_preference="light">#f58a95</color>
+		<color type="primary" scheme_preference="dark">#8c0e20</color>
+	</branding>
+
+	<url type="homepage">https://github.com/liminal-hq/mailslot</url>
+	<url type="bugtracker">https://github.com/liminal-hq/mailslot/issues</url>
+	<url type="vcs-browser">https://github.com/liminal-hq/mailslot</url>
+	<url type="contact">https://github.com/liminal-hq/mailslot/discussions</url>
+	<url type="contribute">https://github.com/liminal-hq/mailslot/blob/main/AGENTS.md</url>
+	<url type="translate">https://github.com/liminal-hq/mailslot</url>
+	<url type="faq">https://github.com/liminal-hq/mailslot#readme</url>
+	<url type="help">https://github.com/liminal-hq/mailslot#readme</url>
+
+	<screenshots>
+		<screenshot type="default">
+			<image type="source" width="1280" height="800">https://raw.githubusercontent.com/liminal-hq/mailslot/main/docs/screenshots/main-idle.png</image>
+			<caption>Share page with the link, QR code and incoming files</caption>
+		</screenshot>
+		<screenshot>
+			<image type="source" width="1280" height="800">https://raw.githubusercontent.com/liminal-hq/mailslot/main/docs/screenshots/main-receiving.png</image>
+			<caption>Receiving a file with progress and checksum</caption>
+		</screenshot>
+	</screenshots>
+
+	<content_rating type="oars-1.1"/>
+
+	<requires>
+		<display_length compare="ge">360</display_length>
+	</requires>
+	<recommends>
+		<control>keyboard</control>
+		<control>pointing</control>
+		<control>touch</control>
+	</recommends>
+	<supports>
+		<internet>offline-only</internet>
+	</supports>
+
+	<provides>
+		<binary>mailslot</binary>
+		<binary>mailslot-cli</binary>
+	</provides>
+
+	<releases>
+		<release version="0.1.0" date="2026-11-06" type="development">
+			<description>
+				<p>First preview: receive files by link with a web page, curl or the Mailslot client; send files and folders; resume and duplicate detection; link expiry and limits; optional HTTPS and UPnP.</p>
+			</description>
+		</release>
+	</releases>
+</component>
