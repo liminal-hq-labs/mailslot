@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Resource bundle for Mailslot.
+
+ (c) Copyright 2026 Liminal HQ, Scott Morris
+ SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<gresources>
+	<gresource prefix="/ca/liminalhq/mailslot">
+		<file preprocess="xml-stripblanks">ui/window.ui</file>
+		<file preprocess="xml-stripblanks">ui/upload_row.ui</file>
+		<file>style.css</file>
+	</gresource>
+</gresources>

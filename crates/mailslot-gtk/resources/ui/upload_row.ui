@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Row for one received or sent file.
+
+ (c) Copyright 2026 Liminal HQ, Scott Morris
+ SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<interface>
+	<requires lib="gtk" version="4.0"/>
+	<requires lib="Adw" version="1.0"/>
+	<template class="MailslotUploadRow" parent="AdwActionRow">
+		<property name="use-markup">False</property>
+		<child type="prefix">
+			<object class="GtkImage" id="state_icon">
+				<property name="icon-name">document-send-symbolic</property>
+			</object>
+		</child>
+		<child type="suffix">
+			<object class="GtkImage" id="risky_icon">
+				<property name="icon-name">dialog-warning-symbolic</property>
+				<property name="visible">False</property>
+				<property name="tooltip-text" translatable="yes">Opening this file may run code</property>
+				<style><class name="risky-icon"/></style>
+			</object>
+		</child>
+		<child type="suffix">
+			<object class="GtkProgressBar" id="progress">
+				<property name="valign">center</property>
+				<property name="width-request">96</property>
+			</object>
+		</child>
+		<child type="suffix">
+			<object class="GtkButton" id="copy_hash_button">
+				<property name="icon-name">edit-copy-symbolic</property>
+				<property name="valign">center</property>
+				<property name="visible">False</property>
+				<property name="tooltip-text" translatable="yes">Copy SHA-256</property>
+				<style><class name="flat"/></style>
+			</object>
+		</child>
+		<child type="suffix">
+			<object class="GtkButton" id="open_button">
+				<property name="icon-name">document-open-symbolic</property>
+				<property name="valign">center</property>
+				<property name="visible">False</property>
+				<property name="tooltip-text" translatable="yes">Open</property>
+				<style><class name="flat"/></style>
+			</object>
+		</child>
+		<child type="suffix">
+			<object class="GtkButton" id="folder_button">
+				<property name="icon-name">folder-open-symbolic</property>
+				<property name="valign">center</property>
+				<property name="visible">False</property>
+				<property name="tooltip-text" translatable="yes">Show in folder</property>
+				<style><class name="flat"/></style>
+			</object>
+		</child>
+	</template>
+</interface>

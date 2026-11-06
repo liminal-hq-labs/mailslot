@@ -1,0 +1,111 @@
+/*
+ * Mailslot drop page styles.
+ *
+ * (c) Copyright 2026 Liminal HQ, Scott Morris
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+ *
+ * System fonts, light and dark from the browser's preference. Brand red and blue appear
+ * only in the logo and links; everything else is neutral.
+ */
+:root {
+	color-scheme: light dark;
+	--bg: #f6f6f7;
+	--surface: #ffffff;
+	--text: #1d1d20;
+	--muted: #5f6368;
+	--border: #d0d3d8;
+	--zone-border: #9aa0a8;
+	--hover: #eceef1;
+	--focus: #1a5fb4;
+	--link: #1b5fc1;
+	--ok: #1e7a3c;
+	--err: #b3261e;
+	--btn: #e6e8ec;
+	--btn-text: #1d1d20;
+	--primary: #2b2f36;
+	--primary-text: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #121214;
+		--surface: #1c1c20;
+		--text: #ececf0;
+		--muted: #a3a8b0;
+		--border: #34363c;
+		--zone-border: #6a6f78;
+		--hover: #26272c;
+		--focus: #78aeed;
+		--link: #7db3f5;
+		--ok: #6fcf8c;
+		--err: #ff8c82;
+		--btn: #2b2d33;
+		--btn-text: #ececf0;
+		--primary: #ececf0;
+		--primary-text: #121214;
+	}
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--text);
+	font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 1.4rem; margin: 0; }
+h2 { font-size: 1rem; margin: 0; }
+a { color: var(--link); }
+.muted { color: var(--muted); font-size: 0.9rem; margin: 2px 0 0; }
+.brand { display: flex; gap: 12px; align-items: center; margin-bottom: 20px; }
+.brand img { flex: none; }
+
+.zone {
+	background: var(--surface);
+	border: 2px dashed var(--zone-border);
+	border-radius: 16px;
+	padding: 36px 20px;
+	text-align: center;
+	transition: background 0.15s, border-color 0.15s;
+}
+.zone.over { background: var(--hover); border-color: var(--focus); border-style: solid; }
+.zone:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.zone-title { font-size: 1.15rem; font-weight: 600; margin: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }
+button {
+	font: inherit;
+	color: var(--btn-text);
+	background: var(--btn);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 10px 16px;
+	min-height: 44px;
+	cursor: pointer;
+}
+button:hover { background: var(--hover); }
+button.primary { background: var(--primary); color: var(--primary-text); border-color: var(--primary); }
+button.primary:hover { opacity: 0.9; }
+button.quiet { background: transparent; border-color: transparent; color: var(--link); min-height: 36px; padding: 6px 10px; }
+button.small { min-height: 34px; padding: 4px 12px; font-size: 0.9rem; }
+button[disabled] { opacity: 0.5; cursor: default; }
+
+.notice { margin: 14px 0 0; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); }
+.notice.err { border-color: var(--err); color: var(--err); }
+
+#sent { margin-top: 28px; }
+.sent-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.item-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.name { font-weight: 600; overflow-wrap: anywhere; }
+.size { color: var(--muted); font-size: 0.9rem; white-space: nowrap; }
+progress { width: 100%; height: 10px; margin: 8px 0 4px; accent-color: var(--primary); }
+.meta { color: var(--muted); font-size: 0.88rem; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.state-done .status { color: var(--ok); }
+.state-error .status { color: var(--err); }
+.hash { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.8rem; overflow-wrap: anywhere; margin-top: 6px; }
+.item-actions { display: flex; gap: 8px; margin-top: 8px; }
+footer { margin-top: 32px; }
+
+@media (prefers-reduced-motion: reduce) { .zone { transition: none; } }
+@media (max-width: 420px) { .zone { padding: 28px 14px; } .actions button { flex: 1 1 100%; } }

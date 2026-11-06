@@ -1,0 +1,50 @@
+/*
+ * Mailslot application styles.
+ *
+ * (c) Copyright 2026 Liminal HQ, Scott Morris
+ * SPDX-License-Identifier: Apache-2.0 OR MIT
+ *
+ * Only libadwaita named colours are used, so the interface follows the system light,
+ * dark and high-contrast settings and the system accent colour.
+ */
+
+.link-url {
+	font-family: monospace;
+}
+
+.hash-text {
+	font-family: monospace;
+	font-size: smaller;
+}
+
+/* Persistent badge shown in the header while the port is open on the router. */
+.exposed-badge {
+	background-color: @warning_bg_color;
+	color: @warning_fg_color;
+	border-radius: 99px;
+	padding: 2px 12px;
+	font-weight: bold;
+}
+
+.exposed-badge:hover {
+	background-color: mix(@warning_bg_color, @window_fg_color, 0.12);
+}
+
+/* Frame around the QR code; the code itself is rendered dark on light by the app. */
+.qr-frame {
+	border-radius: 12px;
+	padding: 12px;
+	border: 1px solid @card_shade_color;
+}
+
+.risky-icon {
+	color: @warning_color;
+}
+
+row.upload-failed .subtitle {
+	color: @error_color;
+}
+
+row.upload-done progressbar {
+	opacity: 0.4;
+}

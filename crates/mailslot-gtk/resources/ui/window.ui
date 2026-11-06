@@ -1,0 +1,474 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Main window of Mailslot: Share, Send and History pages.
+
+ (c) Copyright 2026 Liminal HQ, Scott Morris
+ SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<interface>
+	<requires lib="gtk" version="4.0"/>
+	<requires lib="Adw" version="1.8"/>
+
+	<menu id="primary_menu">
+		<section>
+			<item>
+				<attribute name="label" translatable="yes">_Preferences</attribute>
+				<attribute name="action">app.preferences</attribute>
+			</item>
+			<item>
+				<attribute name="label" translatable="yes">_Keyboard Shortcuts</attribute>
+				<attribute name="action">app.shortcuts</attribute>
+			</item>
+			<item>
+				<attribute name="label" translatable="yes">_About Mailslot</attribute>
+				<attribute name="action">app.about</attribute>
+			</item>
+		</section>
+		<section>
+			<item>
+				<attribute name="label" translatable="yes">_Quit</attribute>
+				<attribute name="action">app.quit</attribute>
+			</item>
+		</section>
+	</menu>
+
+	<menu id="snippet_menu">
+		<section>
+			<item>
+				<attribute name="label" translatable="yes">curl command</attribute>
+				<attribute name="action">win.copy-snippet</attribute>
+				<attribute name="target">curl</attribute>
+			</item>
+			<item>
+				<attribute name="label" translatable="yes">PowerShell command</attribute>
+				<attribute name="action">win.copy-snippet</attribute>
+				<attribute name="target">powershell</attribute>
+			</item>
+			<item>
+				<attribute name="label" translatable="yes">wget command</attribute>
+				<attribute name="action">win.copy-snippet</attribute>
+				<attribute name="target">wget</attribute>
+			</item>
+			<item>
+				<attribute name="label" translatable="yes">mailslot-cli command</attribute>
+				<attribute name="action">win.copy-snippet</attribute>
+				<attribute name="target">cli</attribute>
+			</item>
+		</section>
+		<section>
+			<item>
+				<attribute name="label" translatable="yes">Prompt for an AI agent</attribute>
+				<attribute name="action">win.copy-snippet</attribute>
+				<attribute name="target">agent</attribute>
+			</item>
+		</section>
+	</menu>
+
+	<template class="MailslotWindow" parent="AdwApplicationWindow">
+		<property name="title" translatable="yes">Mailslot</property>
+		<property name="default-width">760</property>
+		<property name="default-height">820</property>
+		<property name="width-request">360</property>
+		<property name="height-request">480</property>
+		<child>
+			<object class="AdwBreakpoint">
+				<condition>max-width: 560sp</condition>
+				<setter object="switcher_bar" property="reveal">True</setter>
+				<setter object="switcher" property="visible">False</setter>
+			</object>
+		</child>
+		<property name="content">
+			<object class="AdwToolbarView">
+				<child type="top">
+					<object class="AdwHeaderBar" id="header">
+						<property name="title-widget">
+							<object class="AdwViewSwitcher" id="switcher">
+								<property name="stack">stack</property>
+								<property name="policy">wide</property>
+							</object>
+						</property>
+						<child type="start">
+							<object class="GtkButton" id="start_button">
+								<property name="label" translatable="yes">Start sharing</property>
+								<property name="action-name">win.toggle-sharing</property>
+								<property name="tooltip-text" translatable="yes">Start or stop sharing (Ctrl+Shift+S)</property>
+								<style><class name="suggested-action"/></style>
+							</object>
+						</child>
+						<child type="end">
+							<object class="GtkMenuButton">
+								<property name="icon-name">open-menu-symbolic</property>
+								<property name="menu-model">primary_menu</property>
+								<property name="primary">True</property>
+								<property name="tooltip-text" translatable="yes">Main menu</property>
+							</object>
+						</child>
+						<child type="end">
+							<object class="GtkButton" id="exposed_badge">
+								<property name="label" translatable="yes">Internet-exposed</property>
+								<property name="visible">False</property>
+								<property name="valign">center</property>
+								<property name="tooltip-text" translatable="yes">The port is open on your router. Click to stop.</property>
+								<property name="action-name">win.close-internet</property>
+								<style><class name="flat"/><class name="exposed-badge"/></style>
+							</object>
+						</child>
+					</object>
+				</child>
+				<child type="top">
+					<object class="AdwBanner" id="banner">
+						<property name="revealed">False</property>
+					</object>
+				</child>
+				<property name="content">
+					<object class="AdwToastOverlay" id="toasts">
+						<child>
+							<object class="AdwViewStack" id="stack">
+								<child>
+									<object class="AdwViewStackPage">
+										<property name="name">share</property>
+										<property name="title" translatable="yes">Share</property>
+										<property name="icon-name">send-to-symbolic</property>
+										<property name="child">
+											<object class="GtkStack" id="share_stack">
+												<property name="transition-type">crossfade</property>
+												<child>
+													<object class="GtkStackPage">
+														<property name="name">stopped</property>
+														<property name="child">
+															<object class="AdwStatusPage" id="stopped_page">
+																<property name="icon-name">ca.liminalhq.mailslot</property>
+																<property name="title" translatable="yes">Not sharing</property>
+																<property name="description" translatable="yes">Start sharing to get a private link. Anyone with the link can send you files; nothing is ever served back.</property>
+																<property name="child">
+																	<object class="GtkButton" id="stopped_start_button">
+																		<property name="label" translatable="yes">Start sharing</property>
+																		<property name="halign">center</property>
+																		<property name="action-name">win.toggle-sharing</property>
+																		<style><class name="suggested-action"/><class name="pill"/></style>
+																	</object>
+																</property>
+															</object>
+														</property>
+													</object>
+												</child>
+												<child>
+													<object class="GtkStackPage">
+														<property name="name">running</property>
+														<property name="child">
+															<object class="GtkScrolledWindow">
+																<property name="hscrollbar-policy">never</property>
+																<property name="child">
+																	<object class="AdwClamp">
+																		<property name="maximum-size">640</property>
+																		<property name="margin-top">12</property>
+																		<property name="margin-bottom">24</property>
+																		<property name="margin-start">12</property>
+																		<property name="margin-end">12</property>
+																		<property name="child">
+																			<object class="GtkBox">
+																				<property name="orientation">vertical</property>
+																				<property name="spacing">18</property>
+																				<child>
+																					<object class="AdwPreferencesGroup">
+																						<property name="title" translatable="yes">Drop link</property>
+																						<property name="description" translatable="yes">Share this link with the sender. Anyone who has it can upload.</property>
+																						<child>
+																							<object class="AdwActionRow" id="link_row">
+																								<property name="title" translatable="yes">Link</property>
+																								<property name="subtitle-selectable">True</property>
+																								<property name="subtitle-lines">2</property>
+																								<child type="suffix">
+																									<object class="GtkMenuButton" id="snippet_button">
+																										<property name="icon-name">utilities-terminal-symbolic</property>
+																										<property name="menu-model">snippet_menu</property>
+																										<property name="valign">center</property>
+																										<property name="tooltip-text" translatable="yes">Copy a ready-made command or prompt</property>
+																										<style><class name="flat"/></style>
+																									</object>
+																								</child>
+																								<child type="suffix">
+																									<object class="GtkButton" id="copy_link_button">
+																										<property name="icon-name">edit-copy-symbolic</property>
+																										<property name="valign">center</property>
+																										<property name="action-name">win.copy-link</property>
+																										<property name="tooltip-text" translatable="yes">Copy link (Ctrl+Shift+C)</property>
+																										<style><class name="flat"/></style>
+																									</object>
+																								</child>
+																								<style><class name="link-url"/></style>
+																							</object>
+																						</child>
+																						<child>
+																							<object class="AdwComboRow" id="interface_row">
+																								<property name="title" translatable="yes">Address</property>
+																								<property name="subtitle" translatable="yes">The network address used in the link</property>
+																							</object>
+																						</child>
+																						<child>
+																							<object class="AdwActionRow" id="token_row">
+																								<property name="title" translatable="yes">Secret</property>
+																								<child type="suffix">
+																									<object class="GtkToggleButton" id="reveal_button">
+																										<property name="icon-name">view-reveal-symbolic</property>
+																										<property name="valign">center</property>
+																										<property name="tooltip-text" translatable="yes">Show or hide the secret</property>
+																										<style><class name="flat"/></style>
+																									</object>
+																								</child>
+																								<child type="suffix">
+																									<object class="GtkButton" id="new_link_button">
+																										<property name="icon-name">view-refresh-symbolic</property>
+																										<property name="valign">center</property>
+																										<property name="action-name">win.new-link</property>
+																										<property name="tooltip-text" translatable="yes">Make a new link; the old one stops working</property>
+																										<style><class name="flat"/></style>
+																									</object>
+																								</child>
+																							</object>
+																						</child>
+																						<child>
+																							<object class="AdwActionRow" id="expiry_row">
+																								<property name="title" translatable="yes">Expires</property>
+																							</object>
+																						</child>
+																					</object>
+																				</child>
+																				<child>
+																					<object class="GtkBox" id="qr_box">
+																						<property name="halign">center</property>
+																						<style><class name="qr-frame"/><class name="card"/></style>
+																						<child>
+																							<object class="GtkPicture" id="qr_picture">
+																								<property name="can-shrink">False</property>
+																								<property name="content-fit">contain</property>
+																								<property name="width-request">200</property>
+																								<property name="height-request">200</property>
+																								<property name="alternative-text" translatable="yes">QR code for the mailslot link</property>
+																							</object>
+																						</child>
+																					</object>
+																				</child>
+																				<child>
+																					<object class="AdwPreferencesGroup">
+																						<property name="title" translatable="yes">Internet</property>
+																						<child>
+																							<object class="AdwSwitchRow" id="internet_row">
+																								<property name="title" translatable="yes">Open to the internet</property>
+																								<property name="subtitle" translatable="yes">Asks your router to forward the port with UPnP while you share. Off by default.</property>
+																							</object>
+																						</child>
+																						<child>
+																							<object class="AdwActionRow" id="external_row">
+																								<property name="title" translatable="yes">Internet link</property>
+																								<property name="subtitle-selectable">True</property>
+																								<property name="subtitle-lines">2</property>
+																								<property name="visible">False</property>
+																								<child type="suffix">
+																									<object class="GtkButton" id="copy_external_button">
+																										<property name="icon-name">edit-copy-symbolic</property>
+																										<property name="valign">center</property>
+																										<property name="action-name">win.copy-external</property>
+																										<property name="tooltip-text" translatable="yes">Copy internet link</property>
+																										<style><class name="flat"/></style>
+																									</object>
+																								</child>
+																								<style><class name="link-url"/></style>
+																							</object>
+																						</child>
+																						<child>
+																							<object class="AdwButtonRow" id="manual_row">
+																								<property name="title" translatable="yes">Port-forward instructions…</property>
+																								<property name="start-icon-name">help-about-symbolic</property>
+																							</object>
+																						</child>
+																					</object>
+																				</child>
+																				<child>
+																					<object class="AdwPreferencesGroup" id="incoming_group">
+																						<property name="title" translatable="yes">Incoming</property>
+																						<property name="header-suffix">
+																							<object class="GtkButton" id="clear_button">
+																								<property name="label" translatable="yes">Clear finished</property>
+																								<property name="action-name">win.clear-finished</property>
+																								<style><class name="flat"/></style>
+																							</object>
+																						</property>
+																						<child>
+																							<object class="GtkListBox" id="incoming_list">
+																								<property name="selection-mode">none</property>
+																								<style><class name="boxed-list"/></style>
+																							</object>
+																						</child>
+																					</object>
+																				</child>
+																			</object>
+																		</property>
+																	</object>
+																</property>
+															</object>
+														</property>
+													</object>
+												</child>
+											</object>
+										</property>
+									</object>
+								</child>
+								<child>
+									<object class="AdwViewStackPage">
+										<property name="name">send</property>
+										<property name="title" translatable="yes">Send</property>
+										<property name="icon-name">document-send-symbolic</property>
+										<property name="child">
+											<object class="GtkScrolledWindow">
+												<property name="hscrollbar-policy">never</property>
+												<property name="child">
+													<object class="AdwClamp">
+														<property name="maximum-size">640</property>
+														<property name="margin-top">12</property>
+														<property name="margin-bottom">24</property>
+														<property name="margin-start">12</property>
+														<property name="margin-end">12</property>
+														<property name="child">
+															<object class="GtkBox">
+																<property name="orientation">vertical</property>
+																<property name="spacing">18</property>
+																<child>
+																	<object class="AdwPreferencesGroup">
+																		<property name="title" translatable="yes">Send to another Mailslot</property>
+																		<property name="description" translatable="yes">Paste a link someone gave you, then choose what to send. Uploads resume if the connection drops, and files the other side already has are skipped.</property>
+																		<child>
+																			<object class="AdwEntryRow" id="send_link_entry">
+																				<property name="title" translatable="yes">Link</property>
+																				<child type="suffix">
+																					<object class="GtkButton" id="paste_link_button">
+																						<property name="icon-name">edit-paste-symbolic</property>
+																						<property name="valign">center</property>
+																						<property name="tooltip-text" translatable="yes">Paste a link from the clipboard</property>
+																						<style><class name="flat"/></style>
+																					</object>
+																				</child>
+																			</object>
+																		</child>
+																		<child>
+																			<object class="AdwActionRow" id="send_status_row">
+																				<property name="title" translatable="yes">Destination</property>
+																				<property name="subtitle" translatable="yes">Paste a link to begin</property>
+																			</object>
+																		</child>
+																	</object>
+																</child>
+																<child>
+																	<object class="AdwPreferencesGroup">
+																		<child>
+																			<object class="AdwButtonRow" id="send_files_row">
+																				<property name="title" translatable="yes">Choose files…</property>
+																				<property name="start-icon-name">document-send-symbolic</property>
+																			</object>
+																		</child>
+																		<child>
+																			<object class="AdwButtonRow" id="send_folder_row">
+																				<property name="title" translatable="yes">Choose a folder…</property>
+																				<property name="start-icon-name">folder-symbolic</property>
+																			</object>
+																		</child>
+																	</object>
+																</child>
+																<child>
+																	<object class="AdwPreferencesGroup">
+																		<property name="title" translatable="yes">Sending</property>
+																		<property name="header-suffix">
+																			<object class="GtkButton">
+																				<property name="label" translatable="yes">Clear finished</property>
+																				<property name="action-name">win.clear-finished</property>
+																				<style><class name="flat"/></style>
+																			</object>
+																		</property>
+																		<child>
+																			<object class="GtkListBox" id="send_list">
+																				<property name="selection-mode">none</property>
+																				<style><class name="boxed-list"/></style>
+																			</object>
+																		</child>
+																	</object>
+																</child>
+															</object>
+														</property>
+													</object>
+												</property>
+											</object>
+										</property>
+									</object>
+								</child>
+								<child>
+									<object class="AdwViewStackPage">
+										<property name="name">history</property>
+										<property name="title" translatable="yes">History</property>
+										<property name="icon-name">document-open-recent-symbolic</property>
+										<property name="child">
+											<object class="GtkStack" id="history_stack">
+												<child>
+													<object class="GtkStackPage">
+														<property name="name">empty</property>
+														<property name="child">
+															<object class="AdwStatusPage">
+																<property name="icon-name">document-open-recent-symbolic</property>
+																<property name="title" translatable="yes">No history yet</property>
+																<property name="description" translatable="yes">Files you receive and send appear here.</property>
+															</object>
+														</property>
+													</object>
+												</child>
+												<child>
+													<object class="GtkStackPage">
+														<property name="name">list</property>
+														<property name="child">
+															<object class="GtkScrolledWindow">
+																<property name="hscrollbar-policy">never</property>
+																<property name="child">
+																	<object class="AdwClamp">
+																		<property name="maximum-size">640</property>
+																		<property name="margin-top">12</property>
+																		<property name="margin-bottom">24</property>
+																		<property name="margin-start">12</property>
+																		<property name="margin-end">12</property>
+																		<property name="child">
+																			<object class="AdwPreferencesGroup">
+																				<property name="header-suffix">
+																					<object class="GtkButton">
+																						<property name="label" translatable="yes">Clear history</property>
+																						<property name="action-name">win.clear-history</property>
+																						<style><class name="flat"/></style>
+																					</object>
+																				</property>
+																				<child>
+																					<object class="GtkListBox" id="history_list">
+																						<property name="selection-mode">none</property>
+																						<style><class name="boxed-list"/></style>
+																					</object>
+																				</child>
+																			</object>
+																		</property>
+																	</object>
+																</property>
+															</object>
+														</property>
+													</object>
+												</child>
+											</object>
+										</property>
+									</object>
+								</child>
+							</object>
+						</child>
+					</object>
+				</property>
+				<child type="bottom">
+					<object class="AdwViewSwitcherBar" id="switcher_bar">
+						<property name="stack">stack</property>
+					</object>
+				</child>
+			</object>
+		</property>
+	</template>
+</interface>
