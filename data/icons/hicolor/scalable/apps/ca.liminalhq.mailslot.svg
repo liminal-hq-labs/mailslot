@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Mailslot app icon: a blue card slipping into a white letter slot on a red tile.
+
+  (c) Copyright 2026 Liminal HQ, Scott Morris
+  SPDX-License-Identifier: Apache-2.0 OR MIT
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 64 64">
+	<defs>
+		<linearGradient id="tile" x1="12" y1="6" x2="52" y2="60" gradientUnits="userSpaceOnUse">
+			<stop offset="0" stop-color="#F0505F"/>
+			<stop offset="1" stop-color="#BE1A2E"/>
+		</linearGradient>
+		<linearGradient id="plate" x1="0" y1="28" x2="0" y2="50" gradientUnits="userSpaceOnUse">
+			<stop offset="0" stop-color="#FFFFFF"/>
+			<stop offset="1" stop-color="#E4E9F2"/>
+		</linearGradient>
+		<linearGradient id="card" x1="22" y1="9" x2="42" y2="34" gradientUnits="userSpaceOnUse">
+			<stop offset="0" stop-color="#4C9AF5"/>
+			<stop offset="1" stop-color="#1F62D0"/>
+		</linearGradient>
+		<radialGradient id="glow" cx="32" cy="26" r="26" gradientUnits="userSpaceOnUse">
+			<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.22"/>
+			<stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+		</radialGradient>
+		<filter id="lift" x="-30%" y="-30%" width="160%" height="170%">
+			<feDropShadow dx="0" dy="1.6" stdDeviation="1.4" flood-color="#5E0A16" flood-opacity="0.45"/>
+		</filter>
+		<filter id="soft" x="-30%" y="-30%" width="160%" height="170%">
+			<feDropShadow dx="0" dy="0.8" stdDeviation="0.8" flood-color="#0B2A66" flood-opacity="0.35"/>
+		</filter>
+	</defs>
+	<rect x="2" y="2" width="60" height="60" rx="16" fill="url(#tile)"/>
+	<rect x="2" y="2" width="60" height="60" rx="16" fill="url(#glow)"/>
+	<rect x="2.5" y="2.5" width="59" height="59" rx="15.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.28"/>
+	<rect x="11" y="29" width="42" height="21" rx="10.5" fill="url(#plate)" filter="url(#lift)"/>
+	<rect x="17" y="36" width="30" height="7" rx="3.5" fill="#8C0E20"/>
+	<rect x="17" y="36" width="30" height="2" rx="1" fill="#5E0A16" opacity="0.55"/>
+	<rect x="22" y="9" width="20" height="26" rx="3.5" fill="url(#card)" filter="url(#soft)"/>
+	<rect x="26" y="14" width="12" height="2.4" rx="1.2" fill="#FFFFFF"/>
+	<rect x="26" y="19.5" width="12" height="2.4" rx="1.2" fill="#FFFFFF" opacity="0.85"/>
+	<rect x="26" y="25" width="7" height="2.4" rx="1.2" fill="#FFFFFF" opacity="0.7"/>
+</svg>
