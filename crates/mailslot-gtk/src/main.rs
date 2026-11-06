@@ -11,6 +11,11 @@ fn main() -> gtk::glib::ExitCode {
 		println!("mailslot {}", env!("CARGO_PKG_VERSION"));
 		return gtk::glib::ExitCode::SUCCESS;
 	}
+	// Logs go to the log file; they also go to standard error when MAILSLOT_LOG is set.
+	let _log = mailslot_log::init(mailslot_log::Options {
+		stderr: mailslot_log::filter_is_set(),
+	});
+	tracing::info!(version = env!("CARGO_PKG_VERSION"), "Mailslot starting");
 	mailslot_gtk::i18n::init();
 	mailslot_gtk::run()
 }

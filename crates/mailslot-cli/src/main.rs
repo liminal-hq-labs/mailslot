@@ -205,6 +205,10 @@ fn parse_rate(s: &str) -> Result<u64, String> {
 #[tokio::main]
 async fn main() -> ExitCode {
 	let cli = Cli::parse();
+	// Logs go to the log file and standard error; completions and the man page print only
+	// their own output.
+	let _log = (!matches!(cli.command, Command::Completions { .. } | Command::Man))
+		.then(|| mailslot_log::init(mailslot_log::Options { stderr: true }));
 	let result = match cli.command {
 		Command::Serve(a) => serve::run(a).await,
 		Command::Send(a) => send::run(a).await,

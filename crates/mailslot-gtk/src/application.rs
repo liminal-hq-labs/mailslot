@@ -247,6 +247,29 @@ pub fn build_application() -> adw::Application {
 			}),
 		);
 	}
+	{
+		let window = window.clone();
+		add(
+			&app,
+			"open-log-folder",
+			Box::new(move |_| {
+				let dir = gio::File::for_path(mailslot_log::log_dir());
+				let parent = window.borrow().clone();
+				let toast_window = parent.clone();
+				gtk::FileLauncher::new(Some(&dir)).launch(
+					parent.as_ref(),
+					gio::Cancellable::NONE,
+					move |res| {
+						if res.is_err()
+							&& let Some(w) = &toast_window
+						{
+							w.toast(&gettext("Could not open the log folder"));
+						}
+					},
+				);
+			}),
+		);
+	}
 	let show_file = gio::SimpleAction::new("show-file", Some(glib::VariantTy::STRING));
 	show_file.connect_activate(|_, param| {
 		if let Some(path) = param.and_then(|p| p.get::<String>()) {
