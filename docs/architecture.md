@@ -5,29 +5,38 @@ Mailslot is a library with thin shells on top. `mailslot-core` has no GTK or UI 
 ## Layers
 
 ```text
-┌──────────────────────┐ ┌──────────────────┐ ┌─────────────────────────┐
-│ mailslot (GTK4 app)  │ │ mailslot-cli     │ │ your app (Tauri, Qt, …) │
-│ crate mailslot-gtk   │ │                  │ │                         │
-└──────────┬───────────┘ └────────┬─────────┘ └────────────┬────────────┘
-           │   commands ▼         │   events ▲             │
-           └──────────────────────┴──────────┬─────────────┘
-                              ┌──────────────┴──────────────┐
-                              │ Engine  (mailslot-core)     │
-                              ├───────┬────────┬──────┬─────┤
-                              │server │ client │portmap│ cfg │
-                              └───────┴────────┴──────┴─────┘
-                                  tokio · axum · reqwest · igd-next
+┌─────────────┐ ┌─────────────┐ ┌──────────────────┐ ┌───────────────────────┐
+│ mailslot    │ │ mailslot-cli│ │ mailslotd        │ │ your Rust app         │
+│ (GTK4 app)  │ │             │ │ (mailslot-ipc)   │ │ (Tauri, Iced, …)      │
+└──────┬──────┘ └──────┬──────┘ └────────┬─────────┘ └──────────┬────────────┘
+       │               │                 │ ▲ JSON-RPC           │
+       │               │                 │ │ on a Unix socket   │
+       │               │        ┌────────┴─┴───────┐            │
+       │               │        │ Qt, WinUI, web,  │            │
+       │               │        │ scripts (any     │            │
+       │               │        │ language)        │            │
+       │               │        └──────────────────┘            │
+       │   commands ▼  │   events ▲                             │
+       └───────────────┴─────────────────────────┬──────────────┘
+                              ┌──────────────────┴─────────────────┐
+                              │ Engine  (mailslot-core)            │
+                              ├────────┬────────┬─────────┬────────┤
+                              │ server │ client │ portmap │ config │
+                              │ queue  │ watch  │ mdns    │        │
+                              └────────┴────────┴─────────┴────────┘
+                                 tokio · axum · reqwest · igd-next
 ```
 
 | Crate | Kind | Contents |
 |---|---|---|
-| `mailslot-core` | Library, no GTK | `engine`, `proto` (HTTP contract types), `server`, `client`, `config`, `portmap`, `netinfo`, `naming`, `token`, `snippets`, `events` |
+| `mailslot-core` | Library, no GTK | `engine`, `proto` (HTTP contract types), `server`, `client`, send queue and folder watch, `config`, `portmap`, mDNS discovery, `netinfo`, `naming`, `token`, `snippets`, `events` |
+| `mailslot-ipc` | Library and binary `mailslotd`, no GTK | JSON-RPC 2.0 over a Unix socket, the headless daemon |
 | `mailslot-cli` | Binary `mailslot-cli` | `send`, `serve`, `watch`, `pair`, `status`, man page and shell completions |
 | `mailslot-gtk` | Binary `mailslot` | Share page, Send page, Preferences, link card, history, notifications |
 
 ### Feature flags
 
-`mailslot-core` has `server`, `client`, `portmap` and `tls` features, so an embedder pulls in only what it uses. A client-only program does not link axum. A receiver does not link the upload client.
+`mailslot-core` has `server`, `client`, `portmap`, `tls` and `discovery` features, so an embedder pulls in only what it uses. A client-only program does not link axum. A receiver does not link the upload client.
 
 ## The Engine contract
 
@@ -45,10 +54,12 @@ let snapshot = engine.state();         // current State, for first paint
 engine.start().await?;                 // begin sharing
 engine.rotate_token().await?;          // new link, old one dies at once
 engine.send(SendRequest::new(files, link)).await?;
+engine.pause().await;               // keep the link, answer 503
+engine.resume().await;
 engine.stop().await;
 ```
 
-- **Commands** are async methods: `start`, `stop`, `rotate_token`, `send`, plus configuration updates.
+- **Commands** are async methods: `start`, `stop`, `pause`, `resume`, `rotate_token`, `send`, queue control, plus configuration updates.
 - **Events** form a typed stream: upload started, progress, finished, failed, rejected, sharing state changes, port-mapping state, send-queue progress. Progress is throttled to 10 Hz per transfer. Terminal events are never dropped.
 - **State** is a snapshot that always agrees with the event stream, so a frontend can render first and then apply events.
 - The engine owns no global state and creates no hidden runtime. It takes a `tokio::runtime::Handle`, or builds its own only when asked.
@@ -78,7 +89,41 @@ GObjects never leave the main thread. The app consumes the event stream with `gl
 6. On exit, call `stop()` so the UPnP mapping is removed and partials are cleaned up.
 7. Add a CI check that your frontend builds against `mailslot-core` alone. The `core-embed` job does this for the engine itself.
 
-For a frontend in another language, `mailslot-ipc` (a local JSON-RPC API and the headless `mailslotd`) is on the [roadmap](../SPEC.md#sync-roadmap), followed by UniFFI and C ABI bindings.
+### A frontend in another language
+
+Run `mailslotd` (or embed `mailslot-ipc` in your own process) and talk to it over its Unix socket. The protocol is JSON-RPC 2.0, one JSON object per line, and the methods mirror the engine commands. The full method list is in the [specification](../SPEC.md#local-ipc-and-mailslotd).
+
+1. Connect to `$XDG_RUNTIME_DIR/ca.liminalhq.mailslot/mailslotd.sock`. Only your user can.
+2. Call `state` and render it.
+3. Call `subscribe`, then apply each `event` notification to your model.
+4. Map user actions to methods: `start`, `stop`, `pause`, `resume`, `rotate_token`, `send`, `queue.*`, `config.*`.
+5. Show errors by `data.kind`, not by message text.
+
+A minimal client in Python:
+
+```python
+import json, os, socket
+
+path = os.path.join(os.environ["XDG_RUNTIME_DIR"], "ca.liminalhq.mailslot", "mailslotd.sock")
+sock = socket.socket(socket.AF_UNIX)
+sock.connect(path)
+stream = sock.makefile("rw", encoding="utf-8", newline="\n")
+
+def call(id, method, params=None):
+    stream.write(json.dumps({"jsonrpc": "2.0", "id": id, "method": method, "params": params or {}}) + "\n")
+    stream.flush()
+
+call(1, "state")
+call(2, "subscribe")
+for line in stream:
+    message = json.loads(line)
+    if message.get("method") == "event":
+        print("event", message["params"])
+    else:
+        print("reply", message)
+```
+
+Run `mailslotd` as a service with `systemctl --user enable --now mailslotd` (the unit is `data/mailslotd.service`). A Qt, WinUI or web frontend then needs no Rust. UniFFI and C ABI bindings for in-process use are on the [roadmap](../SPEC.md#sync-roadmap).
 
 ## Embedding in Tauri
 

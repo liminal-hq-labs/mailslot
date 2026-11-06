@@ -36,7 +36,8 @@ Run `make help` for the list. The ones you will use most:
 | `make test-ui` | Display tests under headless weston (`UI_BACKEND=x11` for Xvfb) |
 | `make smoke` | `curl -T` and `mailslot-cli` round trips against a local headless server |
 | `make upnp-test` | Port mapping against miniupnpd on isolated Docker networks |
-| `make data-check` | Desktop file, AppStream, XML, icons and banner |
+| `make data-check` | Desktop file, AppStream, XML, icons, banner and the systemd unit |
+| `make pot` | Regenerate the translation template and merge it into the catalogues |
 | `make validate` | Everything, the same as CI |
 | `make run` | The GUI from the image on your Wayland session |
 | `make deb`, `rpm`, `appimage`, `cli-tarball`, `packages`, `flatpak` | Packages into `dist/` |
@@ -77,6 +78,14 @@ Rust is formatted with rustfmt using hard tabs (see `rustfmt.toml`). That overri
 `make upnp-test` creates two Docker bridges (with no masquerading and no published ports) and runs miniupnpd on them as a stand-in router. It first proves the gateway with `upnpc` (discover, add a mapping, list it, delete it), then runs the core tests named `miniupnpd_*` and marked `#[ignore = "needs gateway"]`. Those read the gateway address from `MAILSLOT_UPNP_GATEWAY` and the client address from `MAILSLOT_UPNP_LAN_IP`.
 
 SSDP multicast works between containers on a user-defined bridge, so this test does not need `--network host`. Running the real app against SSDP on your own LAN does. Testing against a real router is manual and done with the maintainer present.
+
+## Translations
+
+Every user-facing string goes through `gettext`, and `.ui` strings are marked `translatable`. `po/POTFILES.in` lists the files that carry strings, and `po/LINGUAS` lists the languages with a catalogue. `make pot` runs `scripts/make-pot.sh`, which regenerates `po/mailslot.pot` with `xgettext`, merges it into each `po/<lang>.po` (creating stubs for new languages) and fails if a file with translatable strings is missing from `POTFILES.in`. `en_CA` and `fr` start as stubs.
+
+## The daemon
+
+`mailslotd` is the headless daemon from `mailslot-ipc`. Run it with `cargo run -p mailslot-ipc --bin mailslotd` and connect to its socket in `$XDG_RUNTIME_DIR/ca.liminalhq.mailslot/` (see the [specification](../SPEC.md#local-ipc-and-mailslotd)). To run it as a service, install `data/mailslotd.service` into `~/.config/systemd/user/` and run `systemctl --user enable --now mailslotd`. The deb, rpm and tarball packages ship the unit, and the Flatpak and AppImage do not.
 
 ## Checking the data files
 
