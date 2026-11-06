@@ -37,7 +37,7 @@ Dependencies only point down: frontends depend on `mailslot-core`, and core depe
 | | `client` | `Client`: hash, `have?`, `HEAD` offset, resumable `PUT`, retries with backoff, bandwidth cap, `send_many`, `send_stream` |
 | | `portmap` | `open`, `cleanup_stale`, `ActiveMapping::renew` and `remove`, NAT diagnostics |
 | | `discovery` | mDNS `Advertiser` and `browse` |
-| | `watch`, `outbox` | Debounced folder watcher and the persisted queue behind `mailslot-cli watch` |
+| | `watch`, `outbox` | Debounced folder watcher and the persisted queue behind `mailslot-cli watch` (the only persisted send queue; the app's Send page does not persist its sends) |
 | | `config` | `Config` and its sections, `Paths`, loading and saving `config.toml` and the token |
 | | `proto` | Header names, routes, capabilities, the CSP and `MailslotLink` (`mailslot://` links) |
 | | `naming`, `token`, `history`, `netinfo`, `snippets`, `tls`, `error` | Filename sanitizing and collision names, the secret and its constant-time compare, `history.jsonl`, LAN addresses and the opt-in public-IP lookup, copy-paste snippets, the self-signed certificate and its pin, `Error` |

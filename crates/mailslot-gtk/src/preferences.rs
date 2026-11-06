@@ -507,6 +507,14 @@ pub fn build(engine: &Engine, parent: &gtk::Window) -> adw::PreferencesDialog {
 		|c| c.network.public_ip_lookup,
 		|c, v| c.network.public_ip_lookup = v,
 	);
+	ctx.spin(
+		&g,
+		&gettext("Router lease (minutes)"),
+		&gettext("How long the router keeps the port open before it is renewed, 5 to 60"),
+		(5.0, 60.0),
+		|c| f64::from(c.network.upnp_lease_minutes),
+		|c, v| c.network.upnp_lease_minutes = v as u32,
+	);
 	ctx.entry(
 		&g,
 		&gettext("Preferred interface or address"),
