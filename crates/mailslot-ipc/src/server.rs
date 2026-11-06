@@ -72,7 +72,7 @@ mod unix {
 							tokio::spawn(async move { this.connection(stream).await });
 						}
 						Err(e) => {
-							tracing::warn!("accept failed: {e}");
+							tracing::warn!(error = %e, "accept failed");
 							tokio::time::sleep(Duration::from_millis(50)).await;
 						}
 					},
@@ -81,6 +81,7 @@ mod unix {
 		}
 
 		async fn connection(&self, stream: UnixStream) {
+			tracing::info!("IPC client connected");
 			let (read, mut write) = stream.into_split();
 			let (out_tx, mut out_rx) = mpsc::unbounded_channel::<String>();
 			let writer = tokio::spawn(async move {
@@ -121,6 +122,7 @@ mod unix {
 			}
 			drop(out_tx);
 			let _ = tokio::time::timeout(Duration::from_secs(1), writer).await;
+			tracing::info!("IPC client disconnected");
 		}
 	}
 }
@@ -178,6 +180,7 @@ impl Daemon {
 			.as_ref()
 			.is_none_or(|i| i.is_string() || i.is_number() || i.is_null());
 		let method = obj.get("method").and_then(Value::as_str);
+		tracing::debug!(method, "IPC request");
 		if obj.get("jsonrpc").and_then(Value::as_str) != Some("2.0")
 			|| method.is_none()
 			|| !valid_id

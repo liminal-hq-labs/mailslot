@@ -70,6 +70,7 @@ fn harden(mut r: Response, close: bool) -> Response {
 pub(super) async fn handle(shared: Arc<Shared>, peer: SocketAddr, req: Request<Body>) -> Response {
 	let locked = shared.lockout.is_locked(peer.ip());
 	let resp = if locked {
+		tracing::debug!(peer = %peer.ip(), "request from a locked-out peer ignored");
 		not_found()
 	} else {
 		route(&shared, peer, req).await
@@ -89,11 +90,20 @@ async fn route(shared: &Arc<Shared>, peer: SocketAddr, req: Request<Body>) -> Re
 	};
 	let settings = shared.settings();
 	if !shared.token_matches(tok) {
-		shared.lockout.note_bad(
+		let locked = shared.lockout.note_bad(
 			peer.ip(),
 			settings.lockout_threshold,
 			settings.lockout_duration,
 		);
+		if locked {
+			tracing::warn!(
+				peer = %peer.ip(),
+				lock_secs = settings.lockout_duration.as_secs(),
+				"peer locked out after repeated requests with a wrong token"
+			);
+		} else {
+			tracing::debug!(peer = %peer.ip(), method = %parts.method, "request with a wrong token");
+		}
 		return not_found();
 	}
 	let Some(rest) = rest else {
@@ -147,6 +157,7 @@ pub(super) fn reject(
 	status: StatusCode,
 	reason: &'static str,
 ) -> Response {
+	tracing::warn!(peer = %peer.ip(), status = status.as_u16(), reason, "request rejected");
 	shared.emit(UploadEvent::Rejected {
 		peer: peer.ip().to_string(),
 		status: status.as_u16(),

@@ -17,6 +17,7 @@ name = "mailslot-cli"
 path = "src/main.rs"
 
 [dependencies]
+mailslot-log.workspace = true
 mailslot-core = { workspace = true, features = ["server", "client", "portmap", "tls", "watch", "discovery"] }
 anyhow.workspace = true
 hex.workspace = true

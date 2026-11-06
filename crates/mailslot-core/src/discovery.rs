@@ -83,6 +83,7 @@ impl Advertiser {
 impl Drop for Advertiser {
 	fn drop(&mut self) {
 		// Both calls only queue a command for the daemon thread.
+		tracing::info!(name = %self.fullname, "stopped the mDNS announcement");
 		let _ = self.daemon.unregister(&self.fullname);
 		let _ = self.daemon.shutdown();
 	}

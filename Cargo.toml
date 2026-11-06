@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/mailslot-core", "crates/mailslot-cli", "crates/mailslot-gtk", "crates/mailslot-ipc"]
+members = ["crates/mailslot-core", "crates/mailslot-cli", "crates/mailslot-gtk", "crates/mailslot-ipc", "crates/mailslot-log"]
 
 [workspace.package]
 version = "0.1.0"
@@ -12,6 +12,7 @@ homepage = "https://github.com/liminal-hq/mailslot"
 authors = ["Liminal HQ, Scott Morris"]
 
 [workspace.dependencies]
+mailslot-log = { path = "crates/mailslot-log", version = "0.1.0" }
 mailslot-core = { path = "crates/mailslot-core", version = "0.1.0", default-features = false }
 anyhow = "1"
 async-channel = "2"
@@ -43,6 +44,8 @@ tokio-util = { version = "0.7", features = ["io", "rt"] }
 toml = "0.9"
 tower = { version = "0.5", features = ["util"] }
 tracing = "0.1"
+tracing-appender = "0.2"
+tracing-subscriber = { version = "0.3", default-features = false, features = ["std", "fmt", "env-filter", "registry"] }
 unicode-normalization = "0.1"
 
 [profile.release]

@@ -42,6 +42,10 @@ A UPnP mapping exposes the machine to the whole internet, not just the people yo
 
 Routers that ignore leases can leave a mapping behind after a crash. Check the router if Mailslot was killed with SIGKILL or the machine lost power while exposed.
 
+## Logs
+
+The log never contains the token. The engine does not log it or a full link, and the log writer removes token-shaped path segments and `token=` or `pin=` values from every line as a second guard. The log file is created with mode `0600` in `$XDG_STATE_HOME/ca.liminalhq.mailslot` and is capped at three files of 1 MiB. It does record file names, sender addresses and the router's address, so look it over before attaching it to a public issue. "Copy diagnostics" redacts the same way.
+
 ## Transport
 
 Plain HTTP is the default because it keeps `curl` usage simple. On a trusted LAN that is reasonable. Over the internet, enable HTTPS in the Security preferences. Mailslot generates a self-signed certificate and shows its public-key pin, and `mailslot://` links carry the pin so Mailslot clients verify it. For `curl`, use `--pinnedpubkey 'sha256//…'` instead of `-k`.

@@ -18,6 +18,7 @@
 - [Pause and resume](#pause-and-resume)
 - [Send queue and watch](#send-queue-and-watch)
 - [Discovery on the LAN](#discovery-on-the-lan)
+- [Logging and diagnostics](#logging-and-diagnostics)
 - [Local IPC and mailslotd](#local-ipc-and-mailslotd)
 - [Files, paths and names](#files-paths-and-names)
 - [Sync roadmap](#sync-roadmap)
@@ -277,9 +278,11 @@ Mailslot can ask the router to forward the sharing port so the link works from t
 - **Opt-in per session.** The "Open to the internet" switch is off by default. `network.upnp` only remembers the last choice.
 - **Lease-based.** The mapping is a TCP mapping with a lease (`network.upnp_lease_minutes`, default one hour, never infinite). It is renewed while sharing and never outlives the link expiry.
 - **Removed on exit.** The mapping is removed on Stop, on quit and on SIGTERM or SIGINT. On startup, Mailslot removes stale mappings whose description is `Mailslot` and which it can identify.
+- **Address.** The router is asked to forward to the address the operating system uses to reach it, never to a guess from the interface list. Docker, libvirt and VPN interfaces are ranked last when choosing the address for the link, and are labelled as not reachable from other devices in the Address picker.
 - **Protocols.** UPnP-IGD through `igd-next`, with NAT-PMP and PCP fallback.
 - **Visible.** While a mapping is active the header shows "Internet-exposed" and the link card shows the external URL with a copy button.
 - **Honest diagnostics.** The app reports, in plain language: no gateway found, UPnP disabled on the router, a port already mapped by something else, and double NAT or carrier-grade NAT. Double NAT is detected when the router's external address is private or in `100.64.0.0/10`, or differs from the address returned by the opt-in public-IP lookup.
+- **Router errors.** A refusal shows the router's raw error code and text, for example "UPnP error 606: Action not authorized", with the internal address that was requested. MiniUPnPd, which UniFi and many other routers use, only forwards to the address that makes the request, and the message says so. An address outside the router's subnet is called out.
 - **Fallback.** When mapping fails, the Network panel shows manual port-forward instructions and a reminder to remove the forward afterwards.
 - **Testing.** The core test suite runs a fake IGD (SSDP and SOAP). `make upnp-test` runs `miniupnpd` in a Docker network. Checking a real router is manual.
 
@@ -305,6 +308,17 @@ Discovery is opt-in (`network.mdns`, off by default) and local to the link: Mail
 - **The token is never announced.** Discovery only tells a nearby client that a receiver exists. The client still needs the link, from a QR code or the person who shared it.
 - **Clients.** The Send page and `mailslot-cli pair` list discovered receivers, and ask for the link to finish pairing.
 - **Stops with sharing.** The announcement is withdrawn on Stop, Pause and quit.
+
+## Logging and diagnostics
+
+Mailslot writes a log so a failure on someone else's router can be understood afterwards.
+
+- **Location.** `$XDG_STATE_HOME/ca.liminalhq.mailslot/mailslot.log`, by default `~/.local/state/ca.liminalhq.mailslot/mailslot.log`. The file is created with mode `0600` and rotates at 1 MiB, keeping the active file and two older ones (`mailslot.log.1` and `.2`).
+- **Control.** `MAILSLOT_LOG` sets the filter, falling back to `RUST_LOG`, then `info`. It takes the usual `tracing` syntax, so `MAILSLOT_LOG=mailslot_core::portmap=debug` shows the UPnP conversation.
+- **Where it goes.** The desktop app logs to the file, and also to standard error when `MAILSLOT_LOG` is set. `mailslot-cli` and `mailslotd` log to both.
+- **Levels.** `error` for something that stopped a feature, `warn` for refusals, rejected requests and lockouts, `info` for lifecycle and each router step, `debug` for detail such as address ranking and IPC calls.
+- **Redacted.** The token never appears: the engine does not log it or a full link, and every line is filtered for token-shaped path segments, `token=` and `pin=` values before it is written. Uploaded file names and sender addresses are logged.
+- **Diagnostics.** "Copy diagnostics" in the Internet section copies the router model when known, the selected address and interface, the gateway, the router's error code and text, the app version and the last 50 log lines, redacted. "Open Log Folder" in the main menu opens the log folder.
 
 ## Local IPC and mailslotd
 

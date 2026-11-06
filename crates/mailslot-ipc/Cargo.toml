@@ -25,6 +25,7 @@ name = "mailslotd"
 path = "src/bin/mailslotd.rs"
 
 [dependencies]
+mailslot-log.workspace = true
 mailslot-core = { workspace = true, features = ["server", "client", "portmap", "tls", "watch", "discovery"] }
 anyhow.workspace = true
 clap.workspace = true

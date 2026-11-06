@@ -152,6 +152,7 @@ impl Attempt {
 		if !resumable {
 			let _ = tokio::fs::remove_file(&self.part).await;
 		}
+		tracing::warn!(id = ?self.id, status = status.as_u16(), reason, resumable, "upload failed");
 		self.shared.emit(UploadEvent::Failed {
 			id: self.id,
 			reason: reason.to_owned(),
@@ -168,6 +169,7 @@ impl Attempt {
 	) -> Response {
 		self.keep_part = true;
 		self.finished = true;
+		tracing::info!(id = ?self.id, status = status.as_u16(), reason, offset, "upload needs a different offset");
 		self.shared.emit(UploadEvent::Failed {
 			id: self.id,
 			reason: reason.to_owned(),
@@ -191,6 +193,7 @@ impl Drop for Attempt {
 			self.shared.files_reserved.fetch_sub(1, Ordering::SeqCst);
 		}
 		let keep = self.resumable && self.keep_part;
+		tracing::warn!(id = ?self.id, resumable = keep, "upload aborted: connection closed");
 		self.shared.emit(UploadEvent::Failed {
 			id: self.id,
 			reason: "connection closed".into(),
@@ -431,6 +434,14 @@ pub(super) async fn put(
 		attempt.upload_id_lock = Some(uid.clone());
 	}
 
+	tracing::info!(
+		id = ?id,
+		name = %name,
+		expected = ?declared_total,
+		peer = %peer.ip(),
+		resume_from = range.as_ref().map(|r| r.start),
+		"upload started"
+	);
 	shared.emit(UploadEvent::Started {
 		id,
 		name: name.clone(),
@@ -693,6 +704,14 @@ pub(super) async fn put(
 	attempt.finished = true;
 	shared.received_bytes.fetch_add(counted, Ordering::SeqCst);
 	shared.hashes.insert(sha.clone(), target.clone());
+	tracing::info!(
+		id = ?id,
+		saved_as = %saved_as,
+		size,
+		sha256 = %sha,
+		peer = %peer.ip(),
+		"upload finished"
+	);
 	shared.emit(UploadEvent::Finished {
 		id,
 		path: target,
@@ -720,6 +739,7 @@ impl Attempt {
 		self.release_reservation();
 		self.keep_part = true;
 		self.finished = true;
+		tracing::info!(id = ?self.id, offset, "partial upload kept for resuming");
 		self.shared.emit(UploadEvent::Failed {
 			id: self.id,
 			reason: "partial upload kept".into(),

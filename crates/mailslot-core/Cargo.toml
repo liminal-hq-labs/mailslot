@@ -64,6 +64,7 @@ rcgen = { version = "0.14", default-features = false, features = ["ring", "pem"]
 
 [dev-dependencies]
 proptest.workspace = true
+tracing-subscriber.workspace = true
 tempfile = "3"
 tokio = { workspace = true, features = ["process"] }
 

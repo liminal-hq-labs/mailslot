@@ -61,6 +61,7 @@ fn main() -> ExitCode {
 async fn run(a: Args) -> Result<()> {
 	use tokio::signal::unix::{SignalKind, signal};
 
+	let _log = mailslot_log::init(mailslot_log::Options { stderr: true });
 	mailslot_core::tls::ensure_default_provider();
 	let paths = match &a.home {
 		Some(h) => Paths::in_dir(h),
@@ -71,6 +72,7 @@ async fn run(a: Args) -> Result<()> {
 		.build()
 		.await
 		.context("preparing the engine")?;
+	tracing::info!(version = env!("CARGO_PKG_VERSION"), "mailslotd starting");
 	let path = a.socket.unwrap_or_else(default_socket_path);
 	let listener = bind(&path)
 		.await

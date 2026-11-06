@@ -77,6 +77,8 @@ Rust is formatted with rustfmt using hard tabs (see `rustfmt.toml`). That overri
 
 `make upnp-test` creates two Docker bridges (with no masquerading and no published ports) and runs miniupnpd on them as a stand-in router. It first proves the gateway with `upnpc` (discover, add a mapping, list it, delete it), then runs the core tests named `miniupnpd_*` and marked `#[ignore = "needs gateway"]`. Those read the gateway address from `MAILSLOT_UPNP_GATEWAY` and the client address from `MAILSLOT_UPNP_LAN_IP`.
 
+To watch the UPnP conversation while you test, turn on debug logging for the port-mapping module with `MAILSLOT_LOG=mailslot_core::portmap=debug`. The log file is `~/.local/state/ca.liminalhq.mailslot/mailslot.log`, and `mailslot` also prints to the terminal when `MAILSLOT_LOG` is set. Debug output shows the ranked local addresses, the router's description and every UPnP request with its timing.
+
 SSDP multicast works between containers on a user-defined bridge, so this test does not need `--network host`. Running the real app against SSDP on your own LAN does. Testing against a real router is manual and done with the maintainer present.
 
 ## Translations
