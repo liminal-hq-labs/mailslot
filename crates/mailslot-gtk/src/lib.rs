@@ -16,7 +16,7 @@ pub mod qr;
 pub mod widgets;
 pub mod window;
 
-pub use application::{APP_ID, build_engine, init_resources, load_css, run};
+pub use application::{APP_ID, build_application, build_engine, init_resources, load_css, run};
 pub use bridge::Bridge;
 pub use window::MailslotWindow;
 

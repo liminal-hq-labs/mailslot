@@ -22,6 +22,10 @@ struct Ctx {
 	cfg: Rc<RefCell<Config>>,
 	refreshers: Rc<RefCell<Vec<Refresher>>>,
 	updating: Rc<Cell<bool>>,
+	/// A save is in flight; later changes are folded into one follow-up save.
+	saving: Rc<Cell<bool>>,
+	/// The working copy changed while a save was in flight.
+	dirty: Rc<Cell<bool>>,
 	dialog: adw::PreferencesDialog,
 }
 
@@ -31,13 +35,26 @@ impl Ctx {
 		if self.updating.get() {
 			return;
 		}
-		let cfg = self.cfg.borrow().clone();
-		let engine = self.engine.clone();
-		let dialog = self.dialog.clone();
+		// Saves must reach the engine in order. Spawning one task per change lets an older
+		// snapshot finish last and overwrite a newer one, so at most one save runs at a time
+		// and changes made meanwhile trigger exactly one more save of the latest copy.
+		if self.saving.replace(true) {
+			self.dirty.set(true);
+			return;
+		}
+		let ctx = self.clone();
 		glib::spawn_future_local(async move {
-			if let Err(e) = engine.update_settings(cfg).await {
-				dialog.add_toast(adw::Toast::new(&e.to_string()));
+			loop {
+				ctx.dirty.set(false);
+				let cfg = ctx.cfg.borrow().clone();
+				if let Err(e) = ctx.engine.update_settings(cfg).await {
+					ctx.dialog.add_toast(adw::Toast::new(&e.to_string()));
+				}
+				if !ctx.dirty.get() {
+					break;
+				}
 			}
+			ctx.saving.set(false);
 		});
 	}
 
@@ -210,6 +227,8 @@ pub fn build(engine: &Engine, parent: &gtk::Window) -> adw::PreferencesDialog {
 		cfg: Rc::new(RefCell::new(engine.config())),
 		refreshers: Rc::default(),
 		updating: Rc::default(),
+		saving: Rc::default(),
+		dirty: Rc::default(),
 		dialog: dialog.clone(),
 	};
 
