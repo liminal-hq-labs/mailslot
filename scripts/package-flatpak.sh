@@ -24,6 +24,8 @@ curl --proto '=https' --tlsv1.2 -fsSL -o /tmp/flatpak-cargo-generator.py \
 	"https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/${generator_ref}/cargo/flatpak-cargo-generator.py"
 python3 /tmp/flatpak-cargo-generator.py Cargo.lock -o build-aux/flatpak/cargo-sources.json
 
+flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
 flatpak-builder --force-clean --disable-rofiles-fuse \
 	--install-deps-from=flathub --user \
 	--repo=build-aux/flatpak/repo \

@@ -70,6 +70,7 @@ jobs:
 
   build:
     name: Build
+    needs: [image]
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     container:
@@ -105,6 +106,7 @@ jobs:
 
   fmt:
     name: Format
+    needs: [image]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     container:
@@ -348,6 +350,7 @@ jobs:
 
   deny:
     name: Dependency policy
+    needs: [image]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     container:
@@ -419,6 +422,7 @@ jobs:
 
   data-check:
     name: Data check
+    needs: [image]
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     container:
