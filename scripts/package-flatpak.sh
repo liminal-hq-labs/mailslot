@@ -26,7 +26,14 @@ python3 /tmp/flatpak-cargo-generator.py Cargo.lock -o build-aux/flatpak/cargo-so
 
 flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 
-flatpak-builder --force-clean --disable-rofiles-fuse \
+# The hosted runners are tight on disk. Let the export finish instead of stopping at the default
+# 3 % free-space reserve.
+if command -v ostree >/dev/null 2>&1; then
+	ostree init --repo=build-aux/flatpak/repo --mode=archive-z2
+	ostree config --repo=build-aux/flatpak/repo set core.min-free-space-percent 0
+fi
+
+flatpak-builder --force-clean --disable-rofiles-fuse --disable-cache \
 	--install-deps-from=flathub --user \
 	--repo=build-aux/flatpak/repo \
 	build-aux/flatpak/build build-aux/flatpak/ca.liminalhq.mailslot.json

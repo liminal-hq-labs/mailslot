@@ -51,6 +51,7 @@ rpm)
 appimage)
 	image="${MAILSLOT_IMAGE:-mailslot-pkg-appimage:local}"
 	docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -e APPIMAGE_EXTRACT_AND_RUN=1 \
+		-v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro \
 		-v "$PWD/dist:/dist" "$image" bash -euo pipefail -c '
 		app="$(ls /dist/Mailslot-*.AppImage | head -n1)"
 		chmod +x "$app"

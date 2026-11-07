@@ -23,7 +23,7 @@ jobs:
   publish-test-results:
     name: Publish test results
     runs-on: ubuntu-24.04
-    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'skipped'
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion != 'skipped' && github.event.workflow_run.conclusion != 'cancelled'
     permissions:
       pull-requests: write
       checks: read
