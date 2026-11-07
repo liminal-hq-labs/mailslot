@@ -27,7 +27,7 @@ install -m 0644 data/man/mailslot-cli.1 "$appdir/usr/share/man/man1/"
 export DEPLOY_GTK_VERSION=4
 export LINUXDEPLOY_OUTPUT_VERSION="$version"
 export LDAI_VERSION="$version"
-export LDAI_UPDATE_INFORMATION="gh-releases-zsync|liminal-hq|mailslot|latest|Mailslot-*x86_64.AppImage.zsync"
+export LDAI_UPDATE_INFORMATION="gh-releases-zsync|liminal-hq-labs|mailslot|latest|Mailslot-*x86_64.AppImage.zsync"
 export LDAI_OUTPUT="dist/Mailslot-${version}-x86_64.AppImage"
 
 extra=()

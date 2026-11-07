@@ -2,7 +2,7 @@
 
 Resolve an item by moving the answer into [decisions.md](decisions.md) and deleting it here.
 
-1. **Repository hosting.** The workflows assume a public GitHub repository, `liminal-hq/mailslot`. Confirm before the first push.
+1. **Repository visibility.** Mailslot lives at `liminal-hq-labs/mailslot`, the first Liminal HQ Labs project. It starts private; make it public when the first release is ready.
 2. **Shared dev image.** The Fedora image stays in this repository. Revisit only if another Liminal HQ project needs GTK 4.20 or newer.
 3. **Token storage.** The token is kept in the config file (`0600`). Moving it to libsecret is an option, with a cost under Flatpak and on headless machines.
 4. **Default bind address.** `0.0.0.0` matches the original script. A LAN-only or localhost default with an explicit expose switch is safer.

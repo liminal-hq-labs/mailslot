@@ -6,7 +6,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: mailslot\n"
-"Report-Msgid-Bugs-To: https://github.com/liminal-hq/mailslot/issues\n"
+"Report-Msgid-Bugs-To: https://github.com/liminal-hq-labs/mailslot/issues\n"
 "POT-Creation-Date: 2026-11-06 22:29+0000\n"
 "PO-Revision-Date: 2026-11-06 18:09+0000\n"
 "Last-Translator: Automatically generated\n"

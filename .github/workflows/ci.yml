@@ -25,7 +25,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  CI_IMAGE: ghcr.io/liminal-hq/mailslot-ci:latest
+  CI_IMAGE: ghcr.io/liminal-hq-labs/mailslot-ci:latest
 
 defaults:
   run:
@@ -63,8 +63,8 @@ jobs:
           target: ci-gtk
           push: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
           tags: |
-            ghcr.io/liminal-hq/mailslot-ci:latest
-            ghcr.io/liminal-hq/mailslot-ci:sha-${{ github.sha }}
+            ghcr.io/liminal-hq-labs/mailslot-ci:latest
+            ghcr.io/liminal-hq-labs/mailslot-ci:sha-${{ github.sha }}
           cache-from: type=gha,scope=ci-gtk
           cache-to: type=gha,scope=ci-gtk,mode=max
 
@@ -73,7 +73,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     container:
-      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      image: ghcr.io/liminal-hq-labs/mailslot-ci:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -108,7 +108,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     container:
-      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      image: ghcr.io/liminal-hq-labs/mailslot-ci:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -138,7 +138,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     container:
-      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      image: ghcr.io/liminal-hq-labs/mailslot-ci:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -174,7 +174,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     container:
-      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      image: ghcr.io/liminal-hq-labs/mailslot-ci:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -220,7 +220,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     container:
-      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      image: ghcr.io/liminal-hq-labs/mailslot-ci:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -268,7 +268,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     container:
-      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      image: ghcr.io/liminal-hq-labs/mailslot-ci:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -351,7 +351,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     container:
-      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      image: ghcr.io/liminal-hq-labs/mailslot-ci:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -422,7 +422,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     container:
-      image: ghcr.io/liminal-hq/mailslot-ci:latest
+      image: ghcr.io/liminal-hq-labs/mailslot-ci:latest
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}

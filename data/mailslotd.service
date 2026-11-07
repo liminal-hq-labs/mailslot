@@ -5,7 +5,7 @@
 
 [Unit]
 Description=Mailslot daemon
-Documentation=https://github.com/liminal-hq/mailslot
+Documentation=https://github.com/liminal-hq-labs/mailslot
 After=network-online.target
 Wants=network-online.target
 

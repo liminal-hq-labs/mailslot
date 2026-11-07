@@ -7,8 +7,8 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.92"
 license = "Apache-2.0 OR MIT"
-repository = "https://github.com/liminal-hq/mailslot"
-homepage = "https://github.com/liminal-hq/mailslot"
+repository = "https://github.com/liminal-hq-labs/mailslot"
+homepage = "https://github.com/liminal-hq-labs/mailslot"
 authors = ["Liminal HQ, Scott Morris"]
 
 [workspace.dependencies]
