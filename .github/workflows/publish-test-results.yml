@@ -32,7 +32,7 @@ jobs:
     steps:
       # The comment script comes from the default branch, never from the pull request under test.
       - name: Checkout the default branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
 
