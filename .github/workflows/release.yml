@@ -42,7 +42,7 @@ jobs:
       version: ${{ steps.tag.outputs.version }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_tag || github.ref }}
 
@@ -70,11 +70,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_tag || github.ref }}
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
         with:
           context: docker
           target: pkg-deb
@@ -88,7 +88,7 @@ jobs:
             -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
             mailslot-pkg-deb:local bash scripts/package-deb.sh
           bash scripts/test-package.sh deb
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-deb
           path: dist/*.deb
@@ -100,11 +100,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_tag || github.ref }}
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
         with:
           context: docker
           target: pkg-rpm
@@ -118,7 +118,7 @@ jobs:
             -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
             mailslot-pkg-rpm:local bash scripts/package-rpm.sh
           bash scripts/test-package.sh rpm
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-rpm
           path: dist/*.rpm
@@ -130,11 +130,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_tag || github.ref }}
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
         with:
           context: docker
           target: pkg-appimage
@@ -148,7 +148,7 @@ jobs:
             -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
             mailslot-pkg-appimage:local bash scripts/package-appimage.sh
           bash scripts/test-package.sh appimage
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-appimage
           path: dist/*.AppImage*
@@ -160,11 +160,11 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_tag || github.ref }}
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/build-push-action@v6
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
         with:
           context: docker
           target: pkg-musl
@@ -178,7 +178,7 @@ jobs:
             -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
             mailslot-pkg-musl:local bash scripts/package-cli-tarball.sh
           bash scripts/test-package.sh cli-tarball
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-cli-tarball
           path: dist/*.tar.gz
@@ -194,12 +194,12 @@ jobs:
       options: --privileged
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_tag || github.ref }}
       - name: Build the Flatpak bundle
         run: bash scripts/package-flatpak.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-flatpak
           path: dist/*.flatpak
@@ -214,12 +214,12 @@ jobs:
       contents: write
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ needs.prepare.outputs.tag }}
 
       - name: Download the packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-*
           path: dist
