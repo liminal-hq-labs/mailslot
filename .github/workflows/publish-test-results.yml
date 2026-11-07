@@ -1,7 +1,7 @@
 # Posts the results of a finished CI run to its pull request as one sticky comment.
 #
 # Split out from ci.yml because the pull_request event's own GITHUB_TOKEN is read-only for
-# Dependabot and fork PRs. A `workflow_run` trigger always runs with this workflow file's own
+# fork PRs. A `workflow_run` trigger always runs with this workflow file's own
 # permissions, from the default branch, whoever opened the pull request. The comment holds the
 # pass, fail and skip counts per suite, the failing test names with an excerpt of each failure,
 # and the status of every check on the commit. It is found by a hidden marker and updated in place.

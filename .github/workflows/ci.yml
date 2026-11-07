@@ -841,7 +841,7 @@ jobs:
           fi
 
       # Consumed by publish-test-results.yml. The pull_request event's token is read-only for fork
-      # and Dependabot PRs, so results are published from a separate workflow_run workflow.
+      # PRs, so results are published from a separate workflow_run workflow.
       - name: Upload event file
         if: always()
         uses: actions/upload-artifact@v4

@@ -156,7 +156,7 @@ packaging/     Arch PKGBUILD, AppImage recipe, deb and rpm metadata, CLI tarball
 docker/        Dockerfile, smoke-check.sh, run-gui.sh
 scripts/       check and test scripts that Makefile and CI call
 docs/          decisions, security, architecture, development, gtk-primer, packaging, open questions
-.github/       workflows, templates, release configuration, Dependabot
+.github/       workflows, templates, release configuration
 crates/
   mailslot-core/  engine, protocol, server, client, config, portmap, netinfo
   mailslot-cli/   mailslot-cli binary
