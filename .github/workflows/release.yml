@@ -88,7 +88,7 @@ jobs:
             -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
             mailslot-pkg-deb:local bash scripts/package-deb.sh
           bash scripts/test-package.sh deb
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-deb
           path: dist/*.deb
@@ -118,7 +118,7 @@ jobs:
             -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
             mailslot-pkg-rpm:local bash scripts/package-rpm.sh
           bash scripts/test-package.sh rpm
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-rpm
           path: dist/*.rpm
@@ -148,7 +148,7 @@ jobs:
             -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
             mailslot-pkg-appimage:local bash scripts/package-appimage.sh
           bash scripts/test-package.sh appimage
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-appimage
           path: dist/*.AppImage*
@@ -178,7 +178,7 @@ jobs:
             -v "${GITHUB_WORKSPACE}:/workspace" -w /workspace \
             mailslot-pkg-musl:local bash scripts/package-cli-tarball.sh
           bash scripts/test-package.sh cli-tarball
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-cli-tarball
           path: dist/*.tar.gz
@@ -199,7 +199,7 @@ jobs:
           ref: ${{ inputs.release_tag || github.ref }}
       - name: Build the Flatpak bundle
         run: bash scripts/package-flatpak.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: release-flatpak
           path: dist/*.flatpak
