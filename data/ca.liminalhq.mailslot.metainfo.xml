@@ -50,22 +50,22 @@
 		<color type="primary" scheme_preference="dark">#8c0e20</color>
 	</branding>
 
-	<url type="homepage">https://github.com/liminal-hq/mailslot</url>
-	<url type="bugtracker">https://github.com/liminal-hq/mailslot/issues</url>
-	<url type="vcs-browser">https://github.com/liminal-hq/mailslot</url>
-	<url type="contact">https://github.com/liminal-hq/mailslot/discussions</url>
-	<url type="contribute">https://github.com/liminal-hq/mailslot/blob/main/AGENTS.md</url>
-	<url type="translate">https://github.com/liminal-hq/mailslot</url>
-	<url type="faq">https://github.com/liminal-hq/mailslot#readme</url>
-	<url type="help">https://github.com/liminal-hq/mailslot#readme</url>
+	<url type="homepage">https://github.com/liminal-hq-labs/mailslot</url>
+	<url type="bugtracker">https://github.com/liminal-hq-labs/mailslot/issues</url>
+	<url type="vcs-browser">https://github.com/liminal-hq-labs/mailslot</url>
+	<url type="contact">https://github.com/liminal-hq-labs/mailslot/issues</url>
+	<url type="contribute">https://github.com/liminal-hq-labs/mailslot/blob/main/AGENTS.md</url>
+	<url type="translate">https://github.com/liminal-hq-labs/mailslot</url>
+	<url type="faq">https://github.com/liminal-hq-labs/mailslot#readme</url>
+	<url type="help">https://github.com/liminal-hq-labs/mailslot#readme</url>
 
 	<screenshots>
 		<screenshot type="default">
-			<image type="source" width="760" height="1024">https://raw.githubusercontent.com/liminal-hq/mailslot/main/docs/screenshots/main-idle.png</image>
+			<image type="source" width="760" height="1024">https://raw.githubusercontent.com/liminal-hq-labs/mailslot/main/docs/screenshots/main-idle.png</image>
 			<caption>Share page with the link, QR code and incoming files</caption>
 		</screenshot>
 		<screenshot>
-			<image type="source" width="760" height="1024">https://raw.githubusercontent.com/liminal-hq/mailslot/main/docs/screenshots/main-receiving.png</image>
+			<image type="source" width="760" height="1024">https://raw.githubusercontent.com/liminal-hq-labs/mailslot/main/docs/screenshots/main-receiving.png</image>
 			<caption>Receiving a file with progress and checksum</caption>
 		</screenshot>
 	</screenshots>

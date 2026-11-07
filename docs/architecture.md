@@ -211,7 +211,7 @@ glib::spawn_future_local(async move {
 
 ```toml
 [dependencies]
-mailslot-core = { git = "https://github.com/liminal-hq/mailslot", default-features = false, features = ["server"] }
+mailslot-core = { git = "https://github.com/liminal-hq-labs/mailslot", default-features = false, features = ["server"] }
 futures-util = "0.3"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```

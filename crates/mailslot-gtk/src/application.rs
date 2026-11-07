@@ -96,8 +96,8 @@ fn about_dialog() -> adw::AboutDialog {
 		.comments(gettext(
 			"A private file drop. Share a secret link and receive files; nothing is ever served back.",
 		))
-		.website("https://github.com/liminal-hq/mailslot")
-		.issue_url("https://github.com/liminal-hq/mailslot/issues")
+		.website("https://github.com/liminal-hq-labs/mailslot")
+		.issue_url("https://github.com/liminal-hq-labs/mailslot/issues")
 		.copyright("© 2026 Liminal HQ, Scott Morris")
 		.license_type(gtk::License::Custom)
 		.license(

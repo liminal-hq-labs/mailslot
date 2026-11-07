@@ -29,7 +29,7 @@ done
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-common=(--from-code=UTF-8 --add-comments=TRANSLATORS --package-name=mailslot --msgid-bugs-address=https://github.com/liminal-hq/mailslot/issues --no-location)
+common=(--from-code=UTF-8 --add-comments=TRANSLATORS --package-name=mailslot --msgid-bugs-address=https://github.com/liminal-hq-labs/mailslot/issues --no-location)
 
 xgettext "${common[@]}" --language=Rust --keyword=gettext --keyword=ngettext:1,2 --keyword=pgettext:1c,2 -o "$tmp/rs.pot" "${rs[@]}"
 xgettext "${common[@]}" --language=Glade -o "$tmp/ui.pot" "${ui[@]}"

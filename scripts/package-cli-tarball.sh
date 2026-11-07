@@ -44,7 +44,7 @@ mailslot-cli ${version}
 
 A static build of the Mailslot command-line client and headless receiver, with the mailslotd
 daemon and its systemd user unit when present. Copy the binaries to a directory on your PATH, and
-mailslotd.service to ~/.config/systemd/user/. Documentation: https://github.com/liminal-hq/mailslot
+mailslotd.service to ~/.config/systemd/user/. Documentation: https://github.com/liminal-hq-labs/mailslot
 TXT
 
 tar -C dist -czf "dist/${name}.tar.gz" "$name"

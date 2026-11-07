@@ -116,7 +116,7 @@ python3 scripts/diagram-fit.py --shots /tmp/frames --times 0,2.5,5,7.5 docs/diag
 
 ## Continuous integration
 
-`.github/workflows/ci.yml` runs one job per check and a final `required` job that branch protection should require. Jobs that need the toolchain run in `ghcr.io/liminal-hq/mailslot-ci`, which the `image` job builds and pushes from `main`. The workflows assume the repository `liminal-hq/mailslot`, and the first run on a new repository needs one `workflow_dispatch` of CI on `main` to publish the image.
+`.github/workflows/ci.yml` runs one job per check and a final `required` job that branch protection should require. Jobs that need the toolchain run in `ghcr.io/liminal-hq-labs/mailslot-ci`, which the `image` job builds and pushes from `main`. The workflows assume the repository `liminal-hq-labs/mailslot`, and the first run on a new repository needs one `workflow_dispatch` of CI on `main` to publish the image.
 
 `publish-test-results.yml` posts a single sticky comment on the pull request with counts, failing test names and each check's status. Lint the workflows locally with `make actionlint`.
 

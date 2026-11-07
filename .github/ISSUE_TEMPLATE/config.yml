@@ -6,5 +6,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a vulnerability
-    url: https://github.com/liminal-hq/mailslot/security/advisories/new
+    url: https://github.com/liminal-hq-labs/mailslot/security/advisories/new
     about: Please report security problems privately, not in a public issue.
