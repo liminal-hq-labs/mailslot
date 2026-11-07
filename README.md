@@ -3,14 +3,14 @@
 <p align="center"><img src="assets/hero.svg" alt="Mailslot — a private drop slot for files sent your way" width="100%"></p>
 
 <p align="center">
-  <img alt="Status: pre-alpha" src="https://img.shields.io/badge/status-pre--alpha-e5384a">
+  <img alt="Status: experimental" src="https://img.shields.io/badge/status-experimental-a3e635">
   <img alt="Platform: Linux" src="https://img.shields.io/badge/platform-Linux-1f6feb">
   <img alt="Licence: Apache-2.0 OR MIT" src="https://img.shields.io/badge/licence-Apache--2.0%20OR%20MIT-3fb950">
 </p>
 
 Mailslot is a private drop slot for files. Start sharing, hand out the link, and files sent to it land in a folder on your computer with a checksum. Nothing is ever served back. It also sends: the same app and command line push files to another Mailslot, and interrupted transfers pick up where they stopped.
 
-> **Status:** pre-alpha. It works from source today. Packages arrive with the first release.
+> **Status:** experimental. It works from source today. Packages arrive with the first release.
 
 ## What it's for
 
@@ -85,9 +85,9 @@ More in [docs/security.md](docs/security.md).
 
 Run `make validate` before opening a pull request. The rules are in [AGENTS.md](AGENTS.md).
 
-## Part of Liminal HQ
+## Part of Liminal HQ Labs
 
-Mailslot is a [Liminal HQ](https://github.com/liminal-hq) project. Digital tools for the spaces in between.
+Mailslot is the first project from [Liminal HQ Labs](https://github.com/liminal-hq-labs), where [Liminal HQ](https://github.com/liminal-hq) tries experiments in public. Things here may change or be dropped. Experiments from Liminal HQ — early, rough and open.
 
 ## Licence
 
